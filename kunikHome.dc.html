@@ -307,6 +307,17 @@
                 <button onClick="{{ f.onAddOption }}" type="button" aria-label="הוספת אפשרות חדשה" style="flex:none;width:42px;border-radius:10px;border:1px solid #E4EAF1;background:#F7F9FC;color:#585B5E;font-size:18px;font-weight:700;cursor:pointer;">+</button>
               </div>
             </sc-if>
+            <sc-if value="{{ f.isMultiSelect }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <sc-for list="{{ f.optionItems }}" as="opt" hint-placeholder-count="4">
+                  <label style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:10px;border:1px solid #E4EAF1;background:#F7F9FC;font-size:13.5px;font-weight:600;cursor:pointer;">
+                    <input type="checkbox" checked="{{ opt.checked }}" onChange="{{ opt.onToggle }}" style="width:16px;height:16px;margin:0;" />
+                    {{ opt.label }}
+                  </label>
+                </sc-for>
+                <button onClick="{{ f.onAddOption }}" type="button" aria-label="הוספת אפשרות חדשה" style="flex:none;width:36px;border-radius:10px;border:1px solid #E4EAF1;background:#F7F9FC;color:#585B5E;font-size:16px;font-weight:700;cursor:pointer;">+</button>
+              </div>
+            </sc-if>
           </div>
         </sc-for>
         <div style="display:flex;gap:10px;margin-top:8px;">
@@ -332,7 +343,7 @@ const DOMAINS = [
     dateKey:'renewal', waKey:'phone',
     fields:[
       { key:'type', label:'סוג ביטוח', type:'text', primary:true },
-      { key:'owner', label:'שייך ל', type:'select' },
+      { key:'owner', label:'שייך ל', type:'multiselect' },
       { key:'company', label:'חברה מבטחת', type:'text' },
       { key:'phone', label:'טלפון', type:'tel' },
       { key:'amount', label:'סכום לחיוב', type:'text' },
@@ -346,7 +357,7 @@ const DOMAINS = [
     dateKey:null, waKey:null,
     fields:[
       { key:'name', label:'שם החיסכון/ההשקעה', type:'text', primary:true },
-      { key:'owner', label:'שייך ל', type:'select' },
+      { key:'owner', label:'שייך ל', type:'multiselect' },
       { key:'institution', label:'גוף מנהל', type:'text' },
       { key:'balance', label:'יתרה נוכחית', type:'text' },
       { key:'type', label:'סוג', type:'text' },
@@ -357,7 +368,7 @@ const DOMAINS = [
     dateKey:'nextAppt', waKey:'phone',
     fields:[
       { key:'name', label:'שם התרופה/הטיפול', type:'text', primary:true },
-      { key:'owner', label:'שייך ל', type:'select' },
+      { key:'owner', label:'שייך ל', type:'multiselect' },
       { key:'dosage', label:'מינון/תדירות', type:'text' },
       { key:'doctor', label:'רופא/מרפאה מטפלים', type:'text' },
       { key:'phone', label:'טלפון ליצירת קשר', type:'tel' },
@@ -508,7 +519,7 @@ class Component extends DCLogic {
     e.target.value = '';
   }
 
-  addCategory(domainKey) {
+  addCategory(domainKey, onAdded) {
     const name = window.prompt('שם הקטגוריה החדשה:');
     if (!name) return;
     const trimmed = name.trim();
@@ -520,7 +531,14 @@ class Component extends DCLogic {
       try { localStorage.setItem(STORAGE_CATS_KEY, JSON.stringify(newCategories)); } catch (e) {}
       this.setState({ categories: newCategories });
     }
-    this.updateField('category', trimmed);
+    if (onAdded) onAdded(trimmed);
+  }
+
+  toggleMultiValue(key, opt) {
+    const current = String(this.state.formValues[key] || '').split(',').map(s => s.trim()).filter(Boolean);
+    const idx = current.indexOf(opt);
+    if (idx === -1) current.push(opt); else current.splice(idx, 1);
+    this.updateField(key, current.join(', '));
   }
 
   persist(data) {
@@ -835,15 +853,28 @@ class Component extends DCLogic {
       formTitle = (state.editingId ? 'עריכת רשומה — ' : 'רשומה חדשה — ') + d.label;
       formFields = d.fields.map(f => {
         const isSelect = f.type === 'select';
+        const isMultiSelect = f.type === 'multiselect';
+        const selectedList = isMultiSelect
+          ? String(state.formValues[f.key] || '').split(',').map(s => s.trim()).filter(Boolean)
+          : [];
         return {
           key: f.key, label: f.label, fieldId: 'field-' + d.key + '-' + f.key,
-          type: (f.type === 'textarea' || isSelect) ? 'text' : f.type,
+          type: (f.type === 'textarea' || isSelect || isMultiSelect) ? 'text' : f.type,
           isTextarea: f.type === 'textarea',
           isSelect: isSelect,
-          isInput: f.type !== 'textarea' && !isSelect,
+          isMultiSelect: isMultiSelect,
+          isInput: f.type !== 'textarea' && !isSelect && !isMultiSelect,
           value: state.formValues[f.key] || '',
           options: isSelect ? (state.categories[d.key] || []) : [],
-          onAddOption: isSelect ? (() => self.addCategory(d.key)) : null,
+          optionItems: isMultiSelect ? (state.categories[d.key] || []).map(opt => ({
+            label: opt,
+            checked: selectedList.indexOf(opt) !== -1,
+            onToggle: () => self.toggleMultiValue(f.key, opt),
+          })) : [],
+          onAddOption: (isSelect || isMultiSelect) ? (() => self.addCategory(d.key, (name) => {
+            if (isMultiSelect) self.toggleMultiValue(f.key, name);
+            else self.updateField(f.key, name);
+          })) : null,
           onChange: (e) => self.updateField(f.key, e.target.value),
         };
       });
