@@ -160,8 +160,8 @@
       </sc-if>
 
       <sc-if value="{{ activeDomain.hasItems }}" hint-placeholder-val="{{ false }}">
-        <sc-if value="{{ activeDomain.hasMonthlySummary }}" hint-placeholder-val="{{ false }}">
-          <sc-for list="{{ activeDomain.monthGroups }}" as="grp" hint-placeholder-count="2">
+        <sc-if value="{{ activeDomain.hasGroupedTable }}" hint-placeholder-val="{{ false }}">
+          <sc-for list="{{ activeDomain.groups }}" as="grp" hint-placeholder-count="2">
             <div style="margin-top:26px;">
               <div style="display:flex;align-items:center;justify-content:space-between;background:{{ activeDomain.colorBg }};padding:12px 18px;border-radius:12px 12px 0 0;">
                 <span style="font-weight:800;font-size:15px;color:{{ activeDomain.color }};">{{ grp.label }}</span>
@@ -344,6 +344,7 @@ const DOMAINS = [
     fields:[
       { key:'type', label:'סוג ביטוח', type:'text', primary:true },
       { key:'owner', label:'שייך ל', type:'multiselect' },
+      { key:'category', label:'קטגוריה', type:'select' },
       { key:'company', label:'חברה מבטחת', type:'text' },
       { key:'phone', label:'טלפון', type:'tel' },
       { key:'amount', label:'סכום לחיוב', type:'text' },
@@ -351,30 +352,32 @@ const DOMAINS = [
       { key:'agent', label:'איש קשר בסוכנות', type:'text' },
       { key:'docs', label:'מסמכים מצורפים (תיאור/מיקום)', type:'text' },
       { key:'notes', label:'הערות', type:'textarea' },
-    ], hasTotalSummary:true, totalAmountKey:'amount', totalLabelText:'סה"כ הוצאה חודשית' },
+    ], hasTotalSummary:true, totalAmountKey:'amount', totalLabelText:'סה"כ הוצאה חודשית', groupBy:'category' },
   { key:'savings', label:'חסכונות והשקעות', color:'#0A7A82', bg:'#E6F5F6',
     iconPath:'M4 20V10M10 20V4M16 20v-7M3 20h18',
     dateKey:null, waKey:null,
     fields:[
       { key:'name', label:'שם החיסכון/ההשקעה', type:'text', primary:true },
       { key:'owner', label:'שייך ל', type:'multiselect' },
+      { key:'category', label:'קטגוריה', type:'select' },
       { key:'institution', label:'גוף מנהל', type:'text' },
       { key:'balance', label:'יתרה נוכחית', type:'text' },
       { key:'type', label:'סוג', type:'text' },
       { key:'notes', label:'הערות', type:'textarea' },
-    ]},
+    ], groupBy:'category' },
   { key:'health', label:'תרופות ובריאות', color:'#B23A48', bg:'#FBEAEC',
     iconPath:'M12 21s-7.5-4.6-10-9C.3 8 2 4 6 4c2.2 0 3.7 1.3 6 3.7C14.3 5.3 15.8 4 18 4c4 0 5.7 4 4 8-2.5 4.4-10 9-10 9z',
     dateKey:'nextAppt', waKey:'phone',
     fields:[
       { key:'name', label:'שם התרופה/הטיפול', type:'text', primary:true },
       { key:'owner', label:'שייך ל', type:'multiselect' },
+      { key:'category', label:'קטגוריה', type:'select' },
       { key:'dosage', label:'מינון/תדירות', type:'text' },
       { key:'doctor', label:'רופא/מרפאה מטפלים', type:'text' },
       { key:'phone', label:'טלפון ליצירת קשר', type:'tel' },
       { key:'nextAppt', label:'תור הבא', type:'date' },
       { key:'notes', label:'הערות', type:'textarea' },
-    ]},
+    ], groupBy:'category' },
   { key:'vehicles', label:'רכבים', color:'#1F5F8B', bg:'#E8F1F8',
     iconPath:'M5 16v-3.2L6.6 8A2 2 0 0 1 8.5 6.7h7A2 2 0 0 1 17.4 8L19 12.8V16M5 16h14M5 16v2H7v-2M17 16v2h2v-2M8 12.5h8',
     dateKey:'licenseExpiry', waKey:'insurancePhone',
@@ -399,7 +402,7 @@ const DOMAINS = [
       { key:'location', label:'איפה נמצא', type:'text' },
       { key:'expiry', label:'תוקף (אם רלוונטי)', type:'date' },
       { key:'notes', label:'הערות', type:'textarea' },
-    ]},
+    ], groupBy:'category' },
   { key:'payments', label:'תזכורות לתשלומים', color:'#6E4FA3', bg:'#F1ECFA',
     iconPath:'M12 3a5 5 0 0 0-5 5v3c0 1.2-.5 2.3-1.4 3.1L4 16h16l-1.6-1.9C17.5 13.3 17 12.2 17 11V8a5 5 0 0 0-5-5zM9.5 19a2.5 2.5 0 0 0 5 0',
     dateKey:'dueDate', waKey:'phone',
@@ -438,11 +441,24 @@ const STATUS_COLORS = {
 };
 function defaultCategories() {
   return {
-    documents: DEFAULT_DOC_CATEGORIES.slice(),
-    savings: DEFAULT_SAVINGS_OWNERS.slice(),
-    health: DEFAULT_HEALTH_OWNERS.slice(),
-    insurance: DEFAULT_INSURANCE_OWNERS.slice(),
+    documents: { category: DEFAULT_DOC_CATEGORIES.slice() },
+    savings: { owner: DEFAULT_SAVINGS_OWNERS.slice(), category: [] },
+    health: { owner: DEFAULT_HEALTH_OWNERS.slice(), category: [] },
+    insurance: { owner: DEFAULT_INSURANCE_OWNERS.slice(), category: [] },
   };
+}
+function mergeCategories(parsed) {
+  const defaults = defaultCategories();
+  const merged = {};
+  Object.keys(defaults).forEach(domainKey => {
+    merged[domainKey] = Object.assign({}, defaults[domainKey], (parsed && parsed[domainKey]) || {});
+  });
+  if (parsed) {
+    Object.keys(parsed).forEach(domainKey => {
+      if (!merged[domainKey]) merged[domainKey] = parsed[domainKey];
+    });
+  }
+  return merged;
 }
 
 class Component extends DCLogic {
@@ -472,7 +488,7 @@ class Component extends DCLogic {
       const rawCats = localStorage.getItem(STORAGE_CATS_KEY);
       if (rawCats) {
         const parsedCats = JSON.parse(rawCats);
-        this.setState({ categories: Object.assign(defaultCategories(), parsedCats) });
+        this.setState({ categories: mergeCategories(parsedCats) });
       }
     } catch (e) {}
     this.loadFromSheets();
@@ -508,7 +524,7 @@ class Component extends DCLogic {
         this.persist(newData);
         if (parsed.categories) {
           try { localStorage.setItem(STORAGE_CATS_KEY, JSON.stringify(parsed.categories)); } catch (err) {}
-          this.setState({ categories: Object.assign(defaultCategories(), parsed.categories) });
+          this.setState({ categories: mergeCategories(parsed.categories) });
         }
         alert('הנתונים שוחזרו בהצלחה.');
       } catch (err) {
@@ -519,15 +535,16 @@ class Component extends DCLogic {
     e.target.value = '';
   }
 
-  addCategory(domainKey, onAdded) {
+  addCategory(domainKey, fieldKey, onAdded) {
     const name = window.prompt('שם הקטגוריה החדשה:');
     if (!name) return;
     const trimmed = name.trim();
     if (!trimmed) return;
-    const current = this.state.categories[domainKey] || [];
+    const domainCats = this.state.categories[domainKey] || {};
+    const current = domainCats[fieldKey] || [];
     if (current.indexOf(trimmed) === -1) {
-      const updated = current.concat([trimmed]);
-      const newCategories = Object.assign({}, this.state.categories, { [domainKey]: updated });
+      const updatedDomainCats = Object.assign({}, domainCats, { [fieldKey]: current.concat([trimmed]) });
+      const newCategories = Object.assign({}, this.state.categories, { [domainKey]: updatedDomainCats });
       try { localStorage.setItem(STORAGE_CATS_KEY, JSON.stringify(newCategories)); } catch (e) {}
       this.setState({ categories: newCategories });
     }
@@ -591,7 +608,7 @@ class Component extends DCLogic {
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(merged)); } catch (e) {}
       const next = { data: merged, syncStatus: 'synced' };
       if (res.categories) {
-        next.categories = Object.assign(defaultCategories(), res.categories);
+        next.categories = mergeCategories(res.categories);
         try { localStorage.setItem(STORAGE_CATS_KEY, JSON.stringify(res.categories)); } catch (e) {}
       }
       self.setState(next);
@@ -799,7 +816,7 @@ class Component extends DCLogic {
         };
       });
 
-      let monthGroups = [];
+      let groups = [];
       if (d.hasMonthlySummary) {
         const groupsMap = {};
         rawItems.forEach((item, idx) => {
@@ -810,9 +827,27 @@ class Component extends DCLogic {
           groupsMap[mKey].items.push(items[idx]);
           groupsMap[mKey].total += self.parseAmount(item[d.summaryAmountKey]);
         });
-        monthGroups = Object.keys(groupsMap).sort((a, b) => b.localeCompare(a)).map(k => {
+        groups = Object.keys(groupsMap).sort((a, b) => b.localeCompare(a)).map(k => {
           const g = groupsMap[k];
           return { key: g.key, label: g.label, items: g.items, totalLabel: g.total ? (g.total.toLocaleString('he-IL') + ' ₪') : '—' };
+        });
+      } else if (d.groupBy) {
+        const groupsMap = {};
+        rawItems.forEach((item, idx) => {
+          const val = String(item[d.groupBy] || '').trim();
+          const gKey = val || 'zzz-none';
+          const gLabel = val || 'ללא קטגוריה';
+          if (!groupsMap[gKey]) groupsMap[gKey] = { key: gKey, label: gLabel, items: [] };
+          groupsMap[gKey].items.push(items[idx]);
+        });
+        groups = Object.keys(groupsMap).sort((a, b) => {
+          if (a === 'zzz-none') return 1;
+          if (b === 'zzz-none') return -1;
+          return a.localeCompare(b, 'he');
+        }).map(k => {
+          const g = groupsMap[k];
+          const count = g.items.length;
+          return { key: g.key, label: g.label, items: g.items, totalLabel: count + (count === 1 ? ' רשומה' : ' רשומות') };
         });
       }
 
@@ -830,12 +865,12 @@ class Component extends DCLogic {
           : (items.length === 0 ? 'אין רשומות עדיין' : (items.length + (items.length === 1 ? ' רשומה' : ' רשומות'))),
         columns: columns,
         hasStatusColumn: !!d.dateKey,
-        hasMonthlySummary: !!d.hasMonthlySummary,
-        hasFlatTable: !d.hasMonthlySummary,
+        hasGroupedTable: !!(d.hasMonthlySummary || d.groupBy),
+        hasFlatTable: !d.hasMonthlySummary && !d.groupBy,
         hasTotalSummary: !!d.hasTotalSummary,
         totalLabelText: d.totalLabelText || 'סה"כ',
         totalSummaryLabel: totalSummaryLabel,
-        items: items, monthGroups: monthGroups,
+        items: items, groups: groups,
         hasItems: items.length > 0, isEmpty: items.length === 0,
         hasAnyItems: rawItemsAll.length > 0,
         emptyMessage: rawItemsAll.length === 0
@@ -854,6 +889,7 @@ class Component extends DCLogic {
       formFields = d.fields.map(f => {
         const isSelect = f.type === 'select';
         const isMultiSelect = f.type === 'multiselect';
+        const fieldOptions = (state.categories[d.key] && state.categories[d.key][f.key]) || [];
         const selectedList = isMultiSelect
           ? String(state.formValues[f.key] || '').split(',').map(s => s.trim()).filter(Boolean)
           : [];
@@ -865,13 +901,13 @@ class Component extends DCLogic {
           isMultiSelect: isMultiSelect,
           isInput: f.type !== 'textarea' && !isSelect && !isMultiSelect,
           value: state.formValues[f.key] || '',
-          options: isSelect ? (state.categories[d.key] || []) : [],
-          optionItems: isMultiSelect ? (state.categories[d.key] || []).map(opt => ({
+          options: isSelect ? fieldOptions : [],
+          optionItems: isMultiSelect ? fieldOptions.map(opt => ({
             label: opt,
             checked: selectedList.indexOf(opt) !== -1,
             onToggle: () => self.toggleMultiValue(f.key, opt),
           })) : [],
-          onAddOption: (isSelect || isMultiSelect) ? (() => self.addCategory(d.key, (name) => {
+          onAddOption: (isSelect || isMultiSelect) ? (() => self.addCategory(d.key, f.key, (name) => {
             if (isMultiSelect) self.toggleMultiValue(f.key, name);
             else self.updateField(f.key, name);
           })) : null,
