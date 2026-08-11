@@ -21,6 +21,13 @@
   a:hover{color:#003c80;}
   button{font-family:inherit;}
   input,textarea{font-family:inherit;}
+  button{transition:opacity .15s ease;}
+  button:hover{opacity:.82;}
+  button:active{opacity:.66;}
+  .dc-card{transition:box-shadow .15s ease,transform .15s ease;}
+  .dc-card:hover{box-shadow:0 6px 18px rgba(15,46,82,.12);transform:translateY(-1px);}
+  input:focus,textarea:focus,select:focus{border-color:#3D9AFF;}
+  button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid #3D9AFF;outline-offset:2px;}
 </style>
 </helmet>
 <div dir="rtl" style="display:flex;min-height:100vh;width:100%;background:#F4F7FB;">
@@ -61,7 +68,7 @@
     </div>
   </aside>
 
-  <main dir="rtl" style="flex:1;min-width:0;padding:40px 56px 60px;max-width:1160px;">
+  <main dir="rtl" style="flex:1;min-width:0;padding:40px 40px 60px;max-width:1600px;">
     <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
       <div>
         <h1 style="margin:0 0 6px;font-size:27px;font-weight:800;">סקירה כללית</h1>
@@ -69,7 +76,7 @@
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;margin-top:28px;">
         <sc-for list="{{ homeCards }}" as="c" hint-placeholder-count="6">
-          <div onClick="{{ c.onClick }}" style="background:#fff;border:1px solid #E4EAF1;border-radius:18px;padding:22px 22px;box-shadow:0 2px 8px rgba(15,46,82,.06);cursor:pointer;display:flex;flex-direction:column;gap:14px;transition:transform .15s ease;">
+          <div class="dc-card" onClick="{{ c.onClick }}" style="background:#fff;border:1px solid #E4EAF1;border-radius:18px;padding:22px 22px;box-shadow:0 2px 8px rgba(15,46,82,.06);cursor:pointer;display:flex;flex-direction:column;gap:14px;">
             <div style="width:48px;height:48px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:{{ c.bg }};color:{{ c.color }};">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ c.iconPath }}"></path></svg>
             </div>
@@ -148,7 +155,7 @@
 
       <sc-if value="{{ activeDomain.hasAnyItems }}" hint-placeholder-val="{{ false }}">
         <div style="margin-top:20px;max-width:340px;">
-          <input type="text" placeholder="חיפוש..." value="{{ searchQuery }}" onChange="{{ onSearchChange }}" style="width:100%;padding:10px 14px;border-radius:100px;border:1px solid #E4EAF1;background:#fff;font-size:14px;" />
+          <input type="text" aria-label="חיפוש" placeholder="חיפוש..." value="{{ searchQuery }}" onChange="{{ onSearchChange }}" style="width:100%;padding:10px 14px;border-radius:100px;border:1px solid #E4EAF1;background:#fff;font-size:14px;" />
         </div>
       </sc-if>
 
@@ -165,33 +172,33 @@
                   <thead>
                     <tr>
                       <sc-for list="{{ activeDomain.columns }}" as="col" hint-placeholder-count="4">
-                        <th style="text-align:right;padding:12px 16px;font-size:12.5px;font-weight:800;color:#6A6D70;background:#F7F9FC;border-bottom:1px solid #E4EAF1;white-space:nowrap;">{{ col.label }}</th>
+                        <th style="text-align:right;padding:13px 16px;font-size:12.5px;font-weight:800;color:#6A6D70;background:#F7F9FC;border-bottom:1px solid #E4EAF1;white-space:nowrap;">{{ col.label }}</th>
                       </sc-for>
                       <sc-if value="{{ activeDomain.hasStatusColumn }}" hint-placeholder-val="{{ false }}">
-                        <th style="text-align:right;padding:12px 16px;font-size:12.5px;font-weight:800;color:#6A6D70;background:#F7F9FC;border-bottom:1px solid #E4EAF1;white-space:nowrap;">סטטוס</th>
+                        <th style="text-align:right;padding:13px 16px;font-size:12.5px;font-weight:800;color:#6A6D70;background:#F7F9FC;border-bottom:1px solid #E4EAF1;white-space:nowrap;">סטטוס</th>
                       </sc-if>
-                      <th style="text-align:right;padding:12px 16px;font-size:12.5px;font-weight:800;color:#6A6D70;background:#F7F9FC;border-bottom:1px solid #E4EAF1;white-space:nowrap;width:1%;position:sticky;left:0;z-index:2;box-shadow:1px 0 0 #E4EAF1;">פעולות</th>
+                      <th style="text-align:right;padding:13px 16px;font-size:12.5px;font-weight:800;color:#6A6D70;background:#F7F9FC;border-bottom:1px solid #E4EAF1;white-space:nowrap;width:1%;position:sticky;left:0;z-index:2;box-shadow:1px 0 0 #E4EAF1;">פעולות</th>
                     </tr>
                   </thead>
                   <tbody>
                     <sc-for list="{{ grp.items }}" as="item" hint-placeholder-count="2">
                       <tr>
                         <sc-for list="{{ item.cells }}" as="cell" hint-placeholder-count="4">
-                          <td style="padding:12px 16px;font-size:13.5px;color:#121213;border-bottom:1px solid #F0F3F7;">{{ cell.value }}</td>
+                          <td style="padding:13px 16px;font-size:13.5px;color:#121213;border-bottom:1px solid #F0F3F7;">{{ cell.value }}</td>
                         </sc-for>
                         <sc-if value="{{ activeDomain.hasStatusColumn }}" hint-placeholder-val="{{ false }}">
-                          <td style="padding:12px 16px;border-bottom:1px solid #F0F3F7;">
+                          <td style="padding:13px 16px;border-bottom:1px solid #F0F3F7;">
                             <sc-if value="{{ item.hasDateBadge }}" hint-placeholder-val="{{ false }}">
                               <span style="font-size:12px;font-weight:800;padding:4px 10px;border-radius:100px;background:{{ item.badgeBg }};color:{{ item.badgeColor }};white-space:nowrap;">{{ item.badgeText }}</span>
                             </sc-if>
                           </td>
                         </sc-if>
-                        <td style="padding:12px 16px;border-bottom:1px solid #F0F3F7;white-space:nowrap;width:1%;position:sticky;left:0;z-index:1;background:#fff;box-shadow:1px 0 0 #E4EAF1;">
+                        <td style="padding:13px 16px;border-bottom:1px solid #F0F3F7;white-space:nowrap;width:1%;position:sticky;left:0;z-index:1;background:#fff;box-shadow:1px 0 0 #E4EAF1;">
                           <div style="display:flex;gap:6px;justify-content:flex-end;">
-                            <button onClick="{{ item.onEdit }}" style="width:30px;height:30px;border-radius:8px;border:1px solid #E4EAF1;background:#F7F9FC;color:#585B5E;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                            <button onClick="{{ item.onEdit }}" aria-label="עריכת רשומה" style="width:30px;height:30px;border-radius:8px;border:1px solid #E4EAF1;background:#F7F9FC;color:#585B5E;display:flex;align-items:center;justify-content:center;cursor:pointer;">
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l.8-3.6L15.6 5.6a1.5 1.5 0 0 1 2.1 0l.7.7a1.5 1.5 0 0 1 0 2.1L7.6 19.2 4 20z"></path></svg>
                             </button>
-                            <button onClick="{{ item.onDelete }}" style="width:30px;height:30px;border-radius:8px;border:1px solid #E4EAF1;background:#F7F9FC;color:#B23A48;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                            <button onClick="{{ item.onDelete }}" aria-label="מחיקת רשומה" style="width:30px;height:30px;border-radius:8px;border:1px solid #E4EAF1;background:#F7F9FC;color:#B23A48;display:flex;align-items:center;justify-content:center;cursor:pointer;">
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7M6 7l1 13h10l1-13"></path></svg>
                             </button>
                             <sc-if value="{{ item.hasWa }}" hint-placeholder-val="{{ false }}">
@@ -208,6 +215,12 @@
               </div>
             </div>
           </sc-for>
+        </sc-if>
+        <sc-if value="{{ activeDomain.hasTotalSummary }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:26px;display:flex;align-items:center;justify-content:space-between;background:{{ activeDomain.colorBg }};padding:14px 20px;border-radius:14px;">
+            <span style="font-weight:700;font-size:14px;color:{{ activeDomain.color }};">{{ activeDomain.totalLabelText }}</span>
+            <span style="font-weight:800;font-size:17px;color:{{ activeDomain.color }};">{{ activeDomain.totalSummaryLabel }}</span>
+          </div>
         </sc-if>
         <sc-if value="{{ activeDomain.hasFlatTable }}" hint-placeholder-val="{{ true }}">
           <div style="margin-top:26px;background:#fff;border:1px solid #E4EAF1;border-radius:16px;overflow:auto;min-width:0;box-shadow:0 2px 8px rgba(15,46,82,.06);">
@@ -238,10 +251,10 @@
                     </sc-if>
                     <td style="padding:13px 16px;border-bottom:1px solid #F0F3F7;white-space:nowrap;width:1%;position:sticky;left:0;z-index:1;background:#fff;box-shadow:1px 0 0 #E4EAF1;">
                       <div style="display:flex;gap:6px;justify-content:flex-end;">
-                        <button onClick="{{ item.onEdit }}" style="width:30px;height:30px;border-radius:8px;border:1px solid #E4EAF1;background:#F7F9FC;color:#585B5E;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                        <button onClick="{{ item.onEdit }}" aria-label="עריכת רשומה" style="width:30px;height:30px;border-radius:8px;border:1px solid #E4EAF1;background:#F7F9FC;color:#585B5E;display:flex;align-items:center;justify-content:center;cursor:pointer;">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l.8-3.6L15.6 5.6a1.5 1.5 0 0 1 2.1 0l.7.7a1.5 1.5 0 0 1 0 2.1L7.6 19.2 4 20z"></path></svg>
                         </button>
-                        <button onClick="{{ item.onDelete }}" style="width:30px;height:30px;border-radius:8px;border:1px solid #E4EAF1;background:#F7F9FC;color:#B23A48;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                        <button onClick="{{ item.onDelete }}" aria-label="מחיקת רשומה" style="width:30px;height:30px;border-radius:8px;border:1px solid #E4EAF1;background:#F7F9FC;color:#B23A48;display:flex;align-items:center;justify-content:center;cursor:pointer;">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7M6 7l1 13h10l1-13"></path></svg>
                         </button>
                         <sc-if value="{{ item.hasWa }}" hint-placeholder-val="{{ false }}">
@@ -271,27 +284,27 @@
       <div style="background:#fff;border-radius:20px;padding:30px;max-width:480px;width:100%;max-height:86vh;overflow:auto;display:flex;flex-direction:column;gap:16px;">
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <h2 style="margin:0;font-size:19px;font-weight:800;">{{ formTitle }}</h2>
-          <button onClick="{{ closeForm }}" style="width:30px;height:30px;border-radius:9px;border:1px solid #E4EAF1;background:#F7F9FC;color:#585B5E;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+          <button onClick="{{ closeForm }}" aria-label="סגירה" style="width:30px;height:30px;border-radius:9px;border:1px solid #E4EAF1;background:#F7F9FC;color:#585B5E;display:flex;align-items:center;justify-content:center;cursor:pointer;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
           </button>
         </div>
         <sc-for list="{{ formFields }}" as="f" hint-placeholder-count="5">
           <div style="display:flex;flex-direction:column;gap:6px;">
-            <label style="font-size:13.5px;font-weight:700;color:#4A4D50;">{{ f.label }}</label>
+            <label for="{{ f.fieldId }}" style="font-size:13.5px;font-weight:700;color:#4A4D50;">{{ f.label }}</label>
             <sc-if value="{{ f.isTextarea }}" hint-placeholder-val="{{ false }}">
-              <textarea rows="3" value="{{ f.value }}" onChange="{{ f.onChange }}" style="padding:10px 12px;border-radius:10px;border:1px solid #E4EAF1;font-size:14.5px;resize:vertical;background:#F7F9FC;"></textarea>
+              <textarea id="{{ f.fieldId }}" rows="3" value="{{ f.value }}" onChange="{{ f.onChange }}" style="padding:10px 12px;border-radius:10px;border:1px solid #E4EAF1;font-size:14.5px;resize:vertical;background:#F7F9FC;"></textarea>
             </sc-if>
             <sc-if value="{{ f.isInput }}" hint-placeholder-val="{{ true }}">
-              <input type="{{ f.type }}" value="{{ f.value }}" onChange="{{ f.onChange }}" style="padding:10px 12px;border-radius:10px;border:1px solid #E4EAF1;font-size:14.5px;background:#F7F9FC;" />
+              <input id="{{ f.fieldId }}" type="{{ f.type }}" value="{{ f.value }}" onChange="{{ f.onChange }}" style="padding:10px 12px;border-radius:10px;border:1px solid #E4EAF1;font-size:14.5px;background:#F7F9FC;" />
             </sc-if>
             <sc-if value="{{ f.isSelect }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;gap:8px;">
-                <select value="{{ f.value }}" onChange="{{ f.onChange }}" style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid #E4EAF1;font-size:14.5px;background:#F7F9FC;">
+                <select id="{{ f.fieldId }}" value="{{ f.value }}" onChange="{{ f.onChange }}" style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid #E4EAF1;font-size:14.5px;background:#F7F9FC;">
                   <sc-for list="{{ f.options }}" as="opt" hint-placeholder-count="4">
                     <option value="{{ opt }}">{{ opt }}</option>
                   </sc-for>
                 </select>
-                <button onClick="{{ f.onAddOption }}" type="button" style="flex:none;width:42px;border-radius:10px;border:1px solid #E4EAF1;background:#F7F9FC;color:#585B5E;font-size:18px;font-weight:700;cursor:pointer;">+</button>
+                <button onClick="{{ f.onAddOption }}" type="button" aria-label="הוספת אפשרות חדשה" style="flex:none;width:42px;border-radius:10px;border:1px solid #E4EAF1;background:#F7F9FC;color:#585B5E;font-size:18px;font-weight:700;cursor:pointer;">+</button>
               </div>
             </sc-if>
           </div>
@@ -319,6 +332,7 @@ const DOMAINS = [
     dateKey:'renewal', waKey:'phone',
     fields:[
       { key:'type', label:'סוג ביטוח', type:'text', primary:true },
+      { key:'owner', label:'שייך ל', type:'select' },
       { key:'company', label:'חברה מבטחת', type:'text' },
       { key:'phone', label:'טלפון', type:'tel' },
       { key:'amount', label:'סכום לחיוב', type:'text' },
@@ -326,12 +340,13 @@ const DOMAINS = [
       { key:'agent', label:'איש קשר בסוכנות', type:'text' },
       { key:'docs', label:'מסמכים מצורפים (תיאור/מיקום)', type:'text' },
       { key:'notes', label:'הערות', type:'textarea' },
-    ]},
+    ], hasTotalSummary:true, totalAmountKey:'amount', totalLabelText:'סה"כ הוצאה חודשית' },
   { key:'savings', label:'חסכונות והשקעות', color:'#0A7A82', bg:'#E6F5F6',
     iconPath:'M4 20V10M10 20V4M16 20v-7M3 20h18',
     dateKey:null, waKey:null,
     fields:[
       { key:'name', label:'שם החיסכון/ההשקעה', type:'text', primary:true },
+      { key:'owner', label:'שייך ל', type:'select' },
       { key:'institution', label:'גוף מנהל', type:'text' },
       { key:'balance', label:'יתרה נוכחית', type:'text' },
       { key:'type', label:'סוג', type:'text' },
@@ -342,6 +357,7 @@ const DOMAINS = [
     dateKey:'nextAppt', waKey:'phone',
     fields:[
       { key:'name', label:'שם התרופה/הטיפול', type:'text', primary:true },
+      { key:'owner', label:'שייך ל', type:'select' },
       { key:'dosage', label:'מינון/תדירות', type:'text' },
       { key:'doctor', label:'רופא/מרפאה מטפלים', type:'text' },
       { key:'phone', label:'טלפון ליצירת קשר', type:'tel' },
@@ -358,11 +374,11 @@ const DOMAINS = [
       { key:'testDate', label:'תאריך טסט הבא', type:'date' },
       { key:'insuranceCompany', label:'חברת ביטוח', type:'text' },
       { key:'insuranceType', label:'סוג ביטוח (חובה/מקיף)', type:'text' },
+      { key:'amount', label:'עלות חודשית', type:'text' },
       { key:'insuranceExpiry', label:'תוקף ביטוח', type:'date' },
       { key:'insurancePhone', label:'טלפון חברת הביטוח', type:'tel' },
-      { key:'amount', label:'עלות חודשית', type:'text' },
       { key:'notes', label:'הערות', type:'textarea' },
-    ]},
+    ], hasTotalSummary:true, totalAmountKey:'amount', totalLabelText:'סה"כ הוצאה חודשית' },
   { key:'documents', label:'מסמכים חשובים', color:'#9C6B12', bg:'#FBF1E1',
     iconPath:'M6 3h7l5 5v13H6zM13 3v5h5',
     dateKey:'expiry', waKey:null,
@@ -399,14 +415,30 @@ const STORAGE_KEY = 'finhub_data_v1';
 const STORAGE_CATS_KEY = 'finhub_categories_v1';
 const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycby4vjW_P4KzHwKnuLIwFSO3B7n9oofY9A-5UAJbpPOLlAELvmEpSLfN9bKGuW7g2nv0-w/exec';
 const DEFAULT_DOC_CATEGORIES = ['רפואי', 'פיננסי', 'נדל"ן', 'משפטי', 'ביטוח', 'אחר'];
+const DEFAULT_SAVINGS_OWNERS = ['דנה', 'אלון'];
+const DEFAULT_HEALTH_OWNERS = ['דנה', 'אלון', 'איתי', 'בן'];
+const DEFAULT_INSURANCE_OWNERS = ['דנה', 'אלון', 'איתי', 'בן'];
 const HEBREW_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
 const EMPTY_DATA = { insurance:[], income:[], savings:[], vehicles:[], health:[], documents:[], payments:[] };
+const STATUS_COLORS = {
+  urgent: { bg:'#FBEAEC', color:'#B23A48' },
+  soon: { bg:'#FBF1E1', color:'#9C6B12' },
+  ok: { bg:'#EAF7F1', color:'#00764A' },
+};
+function defaultCategories() {
+  return {
+    documents: DEFAULT_DOC_CATEGORIES.slice(),
+    savings: DEFAULT_SAVINGS_OWNERS.slice(),
+    health: DEFAULT_HEALTH_OWNERS.slice(),
+    insurance: DEFAULT_INSURANCE_OWNERS.slice(),
+  };
+}
 
 class Component extends DCLogic {
   state = {
     activeSection: 'home',
     data: EMPTY_DATA,
-    categories: { documents: DEFAULT_DOC_CATEGORIES.slice() },
+    categories: defaultCategories(),
     syncStatus: 'idle',
     searchQuery: '',
     formOpen: false,
@@ -429,7 +461,7 @@ class Component extends DCLogic {
       const rawCats = localStorage.getItem(STORAGE_CATS_KEY);
       if (rawCats) {
         const parsedCats = JSON.parse(rawCats);
-        this.setState({ categories: Object.assign({ documents: DEFAULT_DOC_CATEGORIES.slice() }, parsedCats) });
+        this.setState({ categories: Object.assign(defaultCategories(), parsedCats) });
       }
     } catch (e) {}
     this.loadFromSheets();
@@ -465,7 +497,7 @@ class Component extends DCLogic {
         this.persist(newData);
         if (parsed.categories) {
           try { localStorage.setItem(STORAGE_CATS_KEY, JSON.stringify(parsed.categories)); } catch (err) {}
-          this.setState({ categories: Object.assign({ documents: DEFAULT_DOC_CATEGORIES.slice() }, parsed.categories) });
+          this.setState({ categories: Object.assign(defaultCategories(), parsed.categories) });
         }
         alert('הנתונים שוחזרו בהצלחה.');
       } catch (err) {
@@ -541,7 +573,7 @@ class Component extends DCLogic {
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(merged)); } catch (e) {}
       const next = { data: merged, syncStatus: 'synced' };
       if (res.categories) {
-        next.categories = Object.assign({ documents: DEFAULT_DOC_CATEGORIES.slice() }, res.categories);
+        next.categories = Object.assign(defaultCategories(), res.categories);
         try { localStorage.setItem(STORAGE_CATS_KEY, JSON.stringify(res.categories)); } catch (e) {}
       }
       self.setState(next);
@@ -618,11 +650,11 @@ class Component extends DCLogic {
     if (days === null) return null;
     const urgent = this.props.urgentDays ?? 14;
     const soon = this.props.soonDays ?? 30;
-    if (days < 0) return { bg:'#FBEAEC', color:'#B23A48', text:'פג לפני ' + Math.abs(days) + ' ימים' };
-    if (days === 0) return { bg:'#FBEAEC', color:'#B23A48', text:'היום' };
-    if (days <= urgent) return { bg:'#FBEAEC', color:'#B23A48', text:'בעוד ' + days + ' ימים' };
-    if (days <= soon) return { bg:'#FBF1E1', color:'#9C6B12', text:'בעוד ' + days + ' ימים' };
-    return { bg:'#EAF7F1', color:'#00764A', text:'בעוד ' + days + ' ימים' };
+    if (days < 0) return Object.assign({ text:'פג לפני ' + Math.abs(days) + ' ימים' }, STATUS_COLORS.urgent);
+    if (days === 0) return Object.assign({ text:'היום' }, STATUS_COLORS.urgent);
+    if (days <= urgent) return Object.assign({ text:'בעוד ' + days + ' ימים' }, STATUS_COLORS.urgent);
+    if (days <= soon) return Object.assign({ text:'בעוד ' + days + ' ימים' }, STATUS_COLORS.soon);
+    return Object.assign({ text:'בעוד ' + days + ' ימים' }, STATUS_COLORS.ok);
   }
 
   parseAmount(str) {
@@ -766,6 +798,12 @@ class Component extends DCLogic {
         });
       }
 
+      let totalSummaryLabel = null;
+      if (d.hasTotalSummary) {
+        const sum = rawItems.reduce((s, it) => s + self.parseAmount(it[d.totalAmountKey]), 0);
+        totalSummaryLabel = sum ? (sum.toLocaleString('he-IL') + ' ₪') : '—';
+      }
+
       const filtered = query && items.length !== rawItemsAll.length;
       activeDomain = {
         key: d.key, label: d.label, color: d.color, colorBg: d.bg,
@@ -776,6 +814,9 @@ class Component extends DCLogic {
         hasStatusColumn: !!d.dateKey,
         hasMonthlySummary: !!d.hasMonthlySummary,
         hasFlatTable: !d.hasMonthlySummary,
+        hasTotalSummary: !!d.hasTotalSummary,
+        totalLabelText: d.totalLabelText || 'סה"כ',
+        totalSummaryLabel: totalSummaryLabel,
         items: items, monthGroups: monthGroups,
         hasItems: items.length > 0, isEmpty: items.length === 0,
         hasAnyItems: rawItemsAll.length > 0,
@@ -795,7 +836,7 @@ class Component extends DCLogic {
       formFields = d.fields.map(f => {
         const isSelect = f.type === 'select';
         return {
-          key: f.key, label: f.label,
+          key: f.key, label: f.label, fieldId: 'field-' + d.key + '-' + f.key,
           type: (f.type === 'textarea' || isSelect) ? 'text' : f.type,
           isTextarea: f.type === 'textarea',
           isSelect: isSelect,
