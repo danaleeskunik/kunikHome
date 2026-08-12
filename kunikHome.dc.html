@@ -719,6 +719,7 @@ class Component extends DCLogic {
     if (!iso) return null;
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const target = new Date(iso + 'T00:00:00');
+    if (isNaN(target.getTime())) return null;
     return Math.round((target - today) / 86400000);
   }
 
@@ -785,6 +786,7 @@ class Component extends DCLogic {
         if (!dateVal) return;
         const primaryField = d.fields.find(f => f.primary);
         const days = self.daysUntil(dateVal);
+        if (days === null) return;
         const badge = self.badgeFor(days);
         const name = item[primaryField.key] || d.label;
         let wa = '';
