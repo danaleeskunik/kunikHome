@@ -190,6 +190,9 @@
                       <sc-if value="{{ activeDomain.hasStatusColumn }}" hint-placeholder-val="{{ false }}">
                         <th style="text-align:right;padding:13px 16px;font-size:12.5px;font-weight:800;color:#6A6D70;background:#F7F9FC;border-bottom:1px solid #E4EAF1;white-space:nowrap;width:110px;">סטטוס</th>
                       </sc-if>
+                      <sc-for list="{{ activeDomain.extraReminderColumns }}" as="rc" hint-placeholder-count="1">
+                        <th style="text-align:right;padding:13px 16px;font-size:12.5px;font-weight:800;color:#6A6D70;background:#F7F9FC;border-bottom:1px solid #E4EAF1;white-space:nowrap;width:110px;">{{ rc.label }}</th>
+                      </sc-for>
                       <th style="text-align:right;padding:13px 16px;font-size:12.5px;font-weight:800;color:#6A6D70;background:#F7F9FC;border-bottom:1px solid #E4EAF1;white-space:nowrap;width:110px;position:sticky;left:0;z-index:2;box-shadow:1px 0 0 #E4EAF1;">פעולות</th>
                     </tr>
                   </thead>
@@ -206,6 +209,13 @@
                             </sc-if>
                           </td>
                         </sc-if>
+                        <sc-for list="{{ item.extraReminders }}" as="er" hint-placeholder-count="1">
+                          <td style="padding:13px 16px;border-bottom:1px solid #F0F3F7;">
+                            <sc-if value="{{ er.hasDateBadge }}" hint-placeholder-val="{{ false }}">
+                              <span style="font-size:12px;font-weight:800;padding:4px 10px;border-radius:100px;background:{{ er.badgeBg }};color:{{ er.badgeColor }};white-space:nowrap;">{{ er.badgeText }}</span>
+                            </sc-if>
+                          </td>
+                        </sc-for>
                         <td style="padding:13px 16px;border-bottom:1px solid #F0F3F7;white-space:nowrap;width:1%;position:sticky;left:0;z-index:1;background:#fff;box-shadow:1px 0 0 #E4EAF1;">
                           <div style="display:flex;gap:6px;justify-content:flex-end;">
                             <button onClick="{{ item.onEdit }}" aria-label="עריכת רשומה" style="width:30px;height:30px;border-radius:8px;border:1px solid #E4EAF1;background:#F7F9FC;color:#585B5E;display:flex;align-items:center;justify-content:center;cursor:pointer;">
@@ -219,6 +229,13 @@
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                               </a>
                             </sc-if>
+                            <sc-for list="{{ item.extraReminders }}" as="er" hint-placeholder-count="1">
+                              <sc-if value="{{ er.hasWa }}" hint-placeholder-val="{{ false }}">
+                                <a href="{{ er.waLink }}" target="_blank" rel="noopener" aria-label="{{ er.waAriaLabel }}" style="width:30px;height:30px;border-radius:8px;background:#EAF7F1;color:#00764A;display:flex;align-items:center;justify-content:center;">
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                                </a>
+                              </sc-if>
+                            </sc-for>
                           </div>
                         </td>
                       </tr>
@@ -250,6 +267,9 @@
                   <sc-if value="{{ activeDomain.hasStatusColumn }}" hint-placeholder-val="{{ false }}">
                     <th style="text-align:right;padding:13px 16px;font-size:12.5px;font-weight:800;color:#6A6D70;background:#F7F9FC;border-bottom:1px solid #E4EAF1;white-space:nowrap;width:110px;">סטטוס</th>
                   </sc-if>
+                  <sc-for list="{{ activeDomain.extraReminderColumns }}" as="rc" hint-placeholder-count="1">
+                    <th style="text-align:right;padding:13px 16px;font-size:12.5px;font-weight:800;color:#6A6D70;background:#F7F9FC;border-bottom:1px solid #E4EAF1;white-space:nowrap;width:110px;">{{ rc.label }}</th>
+                  </sc-for>
                   <th style="text-align:right;padding:13px 16px;font-size:12.5px;font-weight:800;color:#6A6D70;background:#F7F9FC;border-bottom:1px solid #E4EAF1;white-space:nowrap;width:110px;position:sticky;left:0;z-index:2;box-shadow:1px 0 0 #E4EAF1;">פעולות</th>
                 </tr>
               </thead>
@@ -269,6 +289,13 @@
                         </sc-if>
                       </td>
                     </sc-if>
+                    <sc-for list="{{ item.extraReminders }}" as="er" hint-placeholder-count="1">
+                      <td style="padding:13px 16px;border-bottom:1px solid #F0F3F7;">
+                        <sc-if value="{{ er.hasDateBadge }}" hint-placeholder-val="{{ false }}">
+                          <span style="font-size:12px;font-weight:800;padding:4px 10px;border-radius:100px;background:{{ er.badgeBg }};color:{{ er.badgeColor }};white-space:nowrap;">{{ er.badgeText }}</span>
+                        </sc-if>
+                      </td>
+                    </sc-for>
                     <td style="padding:13px 16px;border-bottom:1px solid #F0F3F7;white-space:nowrap;width:1%;position:sticky;left:0;z-index:1;background:#fff;box-shadow:1px 0 0 #E4EAF1;">
                       <div style="display:flex;gap:6px;justify-content:flex-end;">
                         <button onClick="{{ item.onEdit }}" aria-label="עריכת רשומה" style="width:30px;height:30px;border-radius:8px;border:1px solid #E4EAF1;background:#F7F9FC;color:#585B5E;display:flex;align-items:center;justify-content:center;cursor:pointer;">
@@ -282,6 +309,13 @@
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                           </a>
                         </sc-if>
+                        <sc-for list="{{ item.extraReminders }}" as="er" hint-placeholder-count="1">
+                          <sc-if value="{{ er.hasWa }}" hint-placeholder-val="{{ false }}">
+                            <a href="{{ er.waLink }}" target="_blank" rel="noopener" aria-label="{{ er.waAriaLabel }}" style="width:30px;height:30px;border-radius:8px;background:#EAF7F1;color:#00764A;display:flex;align-items:center;justify-content:center;">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                            </a>
+                          </sc-if>
+                        </sc-for>
                       </div>
                     </td>
                   </tr>
@@ -400,7 +434,8 @@ const DOMAINS = [
     ], groupBy:'category' },
   { key:'vehicles', label:'רכבים', color:'#1F5F8B', bg:'#E8F1F8',
     iconPath:'M5 16v-3.2L6.6 8A2 2 0 0 1 8.5 6.7h7A2 2 0 0 1 17.4 8L19 12.8V16M5 16h14M5 16v2H7v-2M17 16v2h2v-2M8 12.5h8',
-    dateKey:'licenseExpiry', waKey:'insurancePhone', waGroupDateKey:'insuranceExpiry',
+    dateKey:'licenseExpiry', waKey:null, waGroupDateKey:'licenseExpiry',
+    extraReminders:[ { key:'insuranceExpiry', label:'ביטוח', groupWa:true } ],
     fields:[
       { key:'nickname', label:'רכב (דגם/כינוי)', type:'text', primary:true },
       { key:'plate', label:'מספר רישוי', type:'text' },
@@ -856,27 +891,33 @@ class Component extends DCLogic {
 
     let upcomingRaw = [];
     DOMAINS.forEach(d => {
-      if (!d.dateKey) return;
+      const reminderDefs = [];
+      if (d.dateKey) reminderDefs.push({ key: d.dateKey, label: null, groupWa: d.waGroupDateKey === d.dateKey, waKey: d.waKey });
+      (d.extraReminders || []).forEach(r => reminderDefs.push({ key: r.key, label: r.label, groupWa: !!r.groupWa, waKey: r.waKey }));
+      if (!reminderDefs.length) return;
+      const primaryField = d.fields.find(f => f.primary);
       (state.data[d.key] || []).forEach(item => {
-        const dateVal = item[d.dateKey];
-        if (!dateVal) return;
-        const primaryField = d.fields.find(f => f.primary);
-        const days = self.daysUntil(dateVal);
-        if (days === null) return;
-        const badge = self.badgeFor(days);
-        const name = item[primaryField.key] || d.label;
-        let wa = '';
-        if (d.waGroupDateKey === d.dateKey) {
-          wa = days <= 30 ? WA_GROUP_LINK : '';
-        } else {
-          const phone = d.waKey ? item[d.waKey] : '';
-          wa = phone ? self.waLink(phone, 'שלום! תזכורת לגבי ' + name + ' - ' + self.formatDate(dateVal) + '.') : '';
-        }
-        upcomingRaw.push({
-          sortVal: dateVal, name: name, domainLabel: d.label, domainColor: d.color,
-          dateLabel: self.formatDate(dateVal),
-          badgeBg: badge.bg, badgeColor: badge.color, badgeText: badge.text,
-          hasWa: !!wa, waLink: wa,
+        reminderDefs.forEach(rd => {
+          const dateVal = item[rd.key];
+          if (!dateVal) return;
+          const days = self.daysUntil(dateVal);
+          if (days === null) return;
+          const badge = self.badgeFor(days);
+          const baseName = item[primaryField.key] || d.label;
+          const name = rd.label ? (baseName + ' · ' + rd.label) : baseName;
+          let wa = '';
+          if (rd.groupWa) {
+            wa = days <= 30 ? WA_GROUP_LINK : '';
+          } else {
+            const phone = rd.waKey ? item[rd.waKey] : '';
+            wa = phone ? self.waLink(phone, 'שלום! תזכורת לגבי ' + name + ' - ' + self.formatDate(dateVal) + '.') : '';
+          }
+          upcomingRaw.push({
+            sortVal: dateVal, name: name, domainLabel: d.label, domainColor: d.color,
+            dateLabel: self.formatDate(dateVal),
+            badgeBg: badge.bg, badgeColor: badge.color, badgeText: badge.text,
+            hasWa: !!wa, waLink: wa,
+          });
         });
       });
     });
@@ -948,6 +989,26 @@ class Component extends DCLogic {
           const sum = d.computedMonthlyKeys.reduce((s, k) => s + self.parseAmount(item[k]), 0) / 12;
           computedValue = sum ? (Math.round(sum * 100) / 100).toLocaleString('he-IL') + ' ₪' : '—';
         }
+        const extraReminders = (d.extraReminders || []).map(r => {
+          const rDays = self.daysUntil(item[r.key]);
+          const rBadge = rDays !== null ? self.badgeFor(rDays) : null;
+          let rWa = '';
+          if (r.groupWa) {
+            rWa = (rDays !== null && rDays <= 30) ? WA_GROUP_LINK : '';
+          } else {
+            const phone = r.waKey ? item[r.waKey] : '';
+            rWa = phone ? self.waLink(phone, 'שלום! תזכורת לגבי ' + r.label + ' - ' + (item[primaryField.key] || d.label) + '.') : '';
+          }
+          return {
+            key: r.key, label: r.label,
+            hasDateBadge: !!rBadge,
+            badgeBg: rBadge ? rBadge.bg : '',
+            badgeColor: rBadge ? rBadge.color : '',
+            badgeText: rBadge ? rBadge.text : '',
+            hasWa: !!rWa, waLink: rWa,
+            waAriaLabel: 'תזכורת בוואטסאפ - ' + r.label,
+          };
+        });
         return {
           id: item.id,
           cells: cells,
@@ -957,6 +1018,7 @@ class Component extends DCLogic {
           badgeColor: badge ? badge.color : '',
           badgeText: badge ? badge.text : '',
           hasWa: !!wa, waLink: wa,
+          extraReminders: extraReminders,
           onEdit: () => self.openEditForm(d.key, item),
           onDelete: () => self.deleteItem(d.key, item.id),
         };
@@ -1024,6 +1086,7 @@ class Component extends DCLogic {
         columns: columns,
         tableStyle: 'width:100%;border-collapse:collapse;table-layout:fixed;',
         hasStatusColumn: !!d.dateKey,
+        extraReminderColumns: (d.extraReminders || []).map(r => ({ key: r.key, label: r.label })),
         hasComputedColumn: !!d.computedMonthlyKeys,
         computedColumnLabel: d.computedMonthlyLabel || '',
         hasGroupedTable: !!(d.hasMonthlySummary || d.groupBy),
