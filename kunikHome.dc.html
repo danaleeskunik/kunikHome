@@ -28,11 +28,11 @@
   .dc-card:hover{box-shadow:0 6px 18px rgba(15,46,82,.12);transform:translateY(-1px);}
   input:focus,textarea:focus,select:focus{border-color:#3D9AFF;}
   button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid #3D9AFF;outline-offset:2px;}
-  .dc-scroll{scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:#C9D9EE #F7F9FC;}
-  .dc-scroll::-webkit-scrollbar{width:10px;height:10px;}
-  .dc-scroll::-webkit-scrollbar-track{background:#F7F9FC;}
-  .dc-scroll::-webkit-scrollbar-thumb{background-color:#C9D9EE;border-radius:100px;border:2px solid #F7F9FC;}
-  .dc-scroll::-webkit-scrollbar-thumb:hover{background-color:#9CC7F5;}
+  .dc-scroll{scrollbar-gutter:stable;scrollbar-width:auto;scrollbar-color:#5C7FA8 #E4EAF1;}
+  .dc-scroll::-webkit-scrollbar{width:14px;height:14px;}
+  .dc-scroll::-webkit-scrollbar-track{background:#E4EAF1;}
+  .dc-scroll::-webkit-scrollbar-thumb{background-color:#5C7FA8;border-radius:100px;border:3px solid #E4EAF1;}
+  .dc-scroll::-webkit-scrollbar-thumb:hover{background-color:#0055B2;}
 </style>
 </helmet>
 <div dir="rtl" style="display:flex;min-height:100vh;width:100%;background:#F4F7FB;">
@@ -308,6 +308,9 @@
             </sc-if>
             <sc-if value="{{ f.isInput }}" hint-placeholder-val="{{ true }}">
               <input id="{{ f.fieldId }}" type="{{ f.type }}" value="{{ f.value }}" onChange="{{ f.onChange }}" style="padding:10px 12px;border-radius:10px;border:1px solid #E4EAF1;font-size:14.5px;background:#F7F9FC;" />
+            </sc-if>
+            <sc-if value="{{ f.isDateInput }}" hint-placeholder-val="{{ false }}">
+              <input id="{{ f.fieldId }}" type="text" inputmode="numeric" placeholder="dd/mm/yyyy" value="{{ f.value }}" onChange="{{ f.onChange }}" style="padding:10px 12px;border-radius:10px;border:1px solid #E4EAF1;font-size:14.5px;background:#F7F9FC;" />
             </sc-if>
             <sc-if value="{{ f.isSelect }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;gap:8px;">
@@ -663,7 +666,12 @@ class Component extends DCLogic {
   }
 
   openEditForm(sectionKey, item) {
-    this.setState({ formOpen: true, editingSection: sectionKey, editingId: item.id, formValues: Object.assign({}, item) });
+    const domain = this.domainByKey(sectionKey);
+    const values = Object.assign({}, item);
+    domain.fields.forEach(f => {
+      if (f.type === 'date' && values[f.key]) values[f.key] = this.formatDate(values[f.key]);
+    });
+    this.setState({ formOpen: true, editingSection: sectionKey, editingId: item.id, formValues: values });
   }
 
   closeForm() {
@@ -678,7 +686,10 @@ class Component extends DCLogic {
     const domain = this.domainByKey(this.state.editingSection);
     if (!domain) return;
     const primaryField = domain.fields.find(f => f.primary);
-    const values = this.state.formValues;
+    const values = Object.assign({}, this.state.formValues);
+    domain.fields.forEach(f => {
+      if (f.type === 'date') values[f.key] = values[f.key] ? this.parseDateInput(values[f.key]) : '';
+    });
     if (primaryField && !((values[primaryField.key] || '').trim())) {
       alert('נא למלא את השדה "' + primaryField.label + '"');
       return;
@@ -706,6 +717,20 @@ class Component extends DCLogic {
     const parts = iso.split('-');
     if (parts.length !== 3) return iso;
     return parts[2] + '/' + parts[1] + '/' + parts[0];
+  }
+
+  formatDateInput(raw) {
+    const digits = String(raw || '').replace(/\D/g, '').slice(0, 8);
+    let out = digits.slice(0, 2);
+    if (digits.length > 2) out += '/' + digits.slice(2, 4);
+    if (digits.length > 4) out += '/' + digits.slice(4, 8);
+    return out;
+  }
+
+  parseDateInput(display) {
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(display || '').trim());
+    if (!m) return '';
+    return m[3] + '-' + m[2] + '-' + m[1];
   }
 
   daysUntil(iso) {
@@ -955,13 +980,15 @@ class Component extends DCLogic {
         const selectedList = isMultiSelect
           ? String(state.formValues[f.key] || '').split(',').map(s => s.trim()).filter(Boolean)
           : [];
+        const isDateInput = f.type === 'date';
         return {
           key: f.key, label: f.label, fieldId: 'field-' + d.key + '-' + f.key,
           type: (f.type === 'textarea' || isSelect || isMultiSelect) ? 'text' : f.type,
           isTextarea: f.type === 'textarea',
           isSelect: isSelect,
           isMultiSelect: isMultiSelect,
-          isInput: f.type !== 'textarea' && !isSelect && !isMultiSelect,
+          isDateInput: isDateInput,
+          isInput: f.type !== 'textarea' && !isSelect && !isMultiSelect && !isDateInput,
           value: state.formValues[f.key] || '',
           options: isSelect ? fieldOptions : [],
           optionItems: isMultiSelect ? fieldOptions.map(opt => ({
@@ -970,7 +997,9 @@ class Component extends DCLogic {
             onToggle: () => self.toggleMultiValue(f.key, opt),
           })) : [],
           onAddOption: isSelect ? (() => self.addCategory(d.key, f.key, (name) => self.updateField(f.key, name))) : null,
-          onChange: (e) => self.updateField(f.key, e.target.value),
+          onChange: isDateInput
+            ? ((e) => self.updateField(f.key, self.formatDateInput(e.target.value)))
+            : ((e) => self.updateField(f.key, e.target.value)),
         };
       });
     }
