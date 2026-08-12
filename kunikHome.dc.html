@@ -55,6 +55,27 @@
   }
 </style>
 </helmet>
+<sc-if value="{{ notAuthed }}" hint-placeholder-val="{{ false }}">
+  <div dir="rtl" style="min-height:100vh;width:100%;background:#0F2E52;display:flex;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#fff;border-radius:20px;padding:36px 32px;max-width:360px;width:100%;box-shadow:0 14px 40px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:18px;align-items:center;text-align:center;">
+      <div style="display:inline-flex;align-items:flex-end;gap:4px;height:30px;">
+        <div style="width:9px;height:14px;border-radius:3px;background:#9CC7F5;"></div>
+        <div style="width:9px;height:22px;border-radius:3px;background:#3D9AFF;"></div>
+        <div style="width:9px;height:30px;border-radius:3px;background:#0F2E52;"></div>
+      </div>
+      <div>
+        <h1 style="margin:0 0 6px;font-size:19px;font-weight:800;color:#121213;">Kunik Home</h1>
+        <p style="margin:0;font-size:13.5px;color:#6A6D70;">הכניסו סיסמה כדי להמשיך</p>
+      </div>
+      <input type="password" value="{{ loginInput }}" onChange="{{ onLoginInputChange }}" placeholder="סיסמה" style="width:100%;padding:13px 14px;border-radius:10px;border:1px solid #DFE2E4;font-size:15px;text-align:center;background:#F7F9FC;" />
+      <sc-if value="{{ authError }}" hint-placeholder-val="{{ false }}">
+        <p style="margin:0;font-size:13px;color:#B23A48;font-weight:600;">סיסמה שגויה, נסו שוב.</p>
+      </sc-if>
+      <button onClick="{{ onLoginSubmit }}" style="width:100%;background:#006EE5;color:#fff;border:none;border-radius:100px;padding:13px;font-size:14.5px;font-weight:800;cursor:pointer;">{{ loginButtonText }}</button>
+    </div>
+  </div>
+</sc-if>
+<sc-if value="{{ authed }}" hint-placeholder-val="{{ true }}">
 <div dir="rtl" class="dc-shell" style="display:flex;min-height:100vh;width:100%;background:#F4F7FB;">
   <aside class="dc-sidebar" style="width:250px;flex:none;background:#0F2E52;padding:30px 20px;display:flex;flex-direction:column;gap:26px;">
     <div class="dc-sidebar-brand">
@@ -430,6 +451,7 @@
     </div>
   </sc-if>
 </div>
+</sc-if>
 
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{
@@ -523,6 +545,7 @@ const HOME_ICON = 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10';
 const STORAGE_KEY = 'finhub_data_v1';
 const STORAGE_CATS_KEY = 'finhub_categories_v1';
 const STORAGE_COLWIDTHS_KEY = 'finhub_colwidths_v1';
+const AUTH_KEY = 'finhub_auth_v1';
 const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycby4vjW_P4KzHwKnuLIwFSO3B7n9oofY9A-5UAJbpPOLlAELvmEpSLfN9bKGuW7g2nv0-w/exec';
 const DEFAULT_SAVINGS_OWNERS = ['דנה', 'אלון'];
 const DEFAULT_HEALTH_OWNERS = ['דנה', 'אלון', 'איתי', 'בן'];
@@ -601,11 +624,18 @@ class Component extends DCLogic {
     formValues: {},
     colWidths: {},
     sortBy: {},
+    authed: true,
+    authError: false,
+    storedPassword: '',
+    loginInput: '',
   };
 
   fileInputRef = React.createRef();
 
   componentDidMount() {
+    let storedPw = '';
+    try { storedPw = localStorage.getItem(AUTH_KEY) || ''; } catch (e) {}
+    this.setState({ storedPassword: storedPw, loginInput: storedPw });
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
@@ -630,7 +660,7 @@ class Component extends DCLogic {
         if (parsedWidths && typeof parsedWidths === 'object') this.setState({ colWidths: parsedWidths });
       }
     } catch (e) {}
-    this.loadFromSheets();
+    this.loadFromSheets(storedPw);
     this._onVisible = () => {
       if (document.visibilityState === 'visible') this.loadFromSheets();
     };
@@ -743,19 +773,25 @@ class Component extends DCLogic {
       if (script.parentNode) script.parentNode.removeChild(script);
     };
     window[cbName] = (res) => {
-      self.setState({ syncStatus: (res && res.status === 'ok') ? 'synced' : 'error' });
+      if (res && res.status === 'unauthorized') {
+        self.setState({ authed: false, syncStatus: 'idle' });
+      } else {
+        self.setState({ syncStatus: (res && res.status === 'ok') ? 'synced' : 'error' });
+      }
       cleanup();
     };
     script.onerror = () => { if (!done) { self.setState({ syncStatus: 'error' }); cleanup(); } };
     script.src = SHEETS_WEBAPP_URL + '?action=save&callback=' + cbName
-      + '&payload=' + encodeURIComponent(payload);
+      + '&payload=' + encodeURIComponent(payload)
+      + '&password=' + encodeURIComponent(this.state.storedPassword || '');
     document.body.appendChild(script);
     setTimeout(() => { if (!done) { self.setState({ syncStatus: 'error' }); cleanup(); } }, 15000);
   }
 
-  loadFromSheets() {
+  loadFromSheets(passwordOverride) {
     if (!SHEETS_WEBAPP_URL || this.props.sheetsSync === false) return;
     const self = this;
+    const pw = passwordOverride !== undefined ? passwordOverride : this.state.storedPassword;
     this.setState({ syncStatus: 'syncing' });
     // JSONP — עוקף חסימות CORS של Apps Script
     const cbName = 'finhubCb' + Date.now();
@@ -767,10 +803,15 @@ class Component extends DCLogic {
       if (script.parentNode) script.parentNode.removeChild(script);
     };
     window[cbName] = (res) => {
-      if (!res || !res.data) { self.setState({ syncStatus: 'stale' }); cleanup(); return; }
+      if (res && res.status === 'unauthorized') {
+        self.setState({ authed: false, authError: !!pw, syncStatus: 'idle' });
+        cleanup();
+        return;
+      }
+      if (!res || !res.data) { self.setState({ syncStatus: 'stale', authed: true, authError: false }); cleanup(); return; }
       const merged = Object.assign({}, EMPTY_DATA, res.data);
       const norm = normalizeData(merged);
-      const next = { syncStatus: 'synced' };
+      const next = { syncStatus: 'synced', authed: true, authError: false };
       if (res.categories) {
         next.categories = mergeCategories(res.categories);
         try { localStorage.setItem(STORAGE_CATS_KEY, JSON.stringify(res.categories)); } catch (e) {}
@@ -785,7 +826,8 @@ class Component extends DCLogic {
       cleanup();
     };
     script.onerror = () => { if (!done) { self.setState({ syncStatus: 'error' }); cleanup(); } };
-    script.src = SHEETS_WEBAPP_URL + (SHEETS_WEBAPP_URL.indexOf('?') === -1 ? '?' : '&') + 'callback=' + cbName;
+    script.src = SHEETS_WEBAPP_URL + (SHEETS_WEBAPP_URL.indexOf('?') === -1 ? '?' : '&') + 'callback=' + cbName
+      + '&password=' + encodeURIComponent(pw || '');
     document.body.appendChild(script);
     setTimeout(() => { if (!done) { self.setState({ syncStatus: 'error' }); cleanup(); } }, 12000);
   }
@@ -854,6 +896,17 @@ class Component extends DCLogic {
 
   updateField(key, value) {
     this.setState(s => ({ formValues: Object.assign({}, s.formValues, { [key]: value }) }));
+  }
+
+  onLoginInputChange(value) {
+    this.setState({ loginInput: value });
+  }
+
+  onLoginSubmit() {
+    const pw = this.state.loginInput;
+    try { localStorage.setItem(AUTH_KEY, pw); } catch (e) {}
+    this.setState({ storedPassword: pw, authError: false });
+    this.loadFromSheets(pw);
   }
 
   saveForm() {
@@ -1274,6 +1327,13 @@ class Component extends DCLogic {
     const sync = syncMap[state.syncStatus] || syncMap.idle;
 
     return {
+      authed: state.authed,
+      notAuthed: !state.authed,
+      authError: state.authError,
+      loginInput: state.loginInput || '',
+      onLoginInputChange: (e) => self.onLoginInputChange(e.target.value),
+      onLoginSubmit: () => self.onLoginSubmit(),
+      loginButtonText: state.syncStatus === 'syncing' ? 'בודק…' : 'כניסה',
       appTitle: this.props.appTitle ?? 'kunikHome',
       showSync: this.props.sheetsSync !== false,
       syncText: sync.text,

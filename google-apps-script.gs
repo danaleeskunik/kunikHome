@@ -1,12 +1,27 @@
 // הדבק/י את כל הקוד הזה ב-Extensions > Apps Script של הגיליון, שמור, ואז:
 // Deploy > Manage deployments > עריכה (עיפרון) > Version: New version > Deploy
 // Execute as: Me | Who has access: Anyone
+//
+// כדי להפעיל הגנת סיסמה (מומלץ, האתר ציבורי ללא login):
+// Project Settings (גלגל שיניים) > Script Properties > Add script property
+// Property: APP_PASSWORD   Value: <הסיסמה שתרצי>
+// כל עוד המאפיין הזה לא קיים, האפליקציה תמשיך לעבוד בלי סיסמה כרגיל.
 
-var SHEET_NAMES = ['insurance', 'income', 'savings', 'vehicles', 'health', 'documents', 'payments'];
+var SHEET_NAMES = ['insurance', 'income', 'savings', 'vehicles', 'health', 'payments'];
 var META_SHEET = '_meta';
+
+function checkAuth(p) {
+  var required = PropertiesService.getScriptProperties().getProperty('APP_PASSWORD');
+  if (!required) return true;
+  return p.password === required;
+}
 
 function doGet(e) {
   var p = (e && e.parameter) ? e.parameter : {};
+
+  if (!checkAuth(p)) {
+    return reply({ status: 'unauthorized' }, p.callback);
+  }
 
   if (p.action === 'save' && p.payload) {
     var result = saveAll(JSON.parse(p.payload));
@@ -17,6 +32,10 @@ function doGet(e) {
 }
 
 function doPost(e) {
+  var p = (e && e.parameter) ? e.parameter : {};
+  if (!checkAuth(p)) {
+    return reply({ status: 'unauthorized' }, null);
+  }
   var raw = (e.parameter && e.parameter.payload)
     ? e.parameter.payload
     : (e.postData ? e.postData.contents : '{}');
