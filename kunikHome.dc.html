@@ -28,6 +28,11 @@
   .dc-card:hover{box-shadow:0 6px 18px rgba(15,46,82,.12);transform:translateY(-1px);}
   input:focus,textarea:focus,select:focus{border-color:#3D9AFF;}
   button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid #3D9AFF;outline-offset:2px;}
+  .dc-scroll{scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:#C9D9EE #F7F9FC;}
+  .dc-scroll::-webkit-scrollbar{width:10px;height:10px;}
+  .dc-scroll::-webkit-scrollbar-track{background:#F7F9FC;}
+  .dc-scroll::-webkit-scrollbar-thumb{background-color:#C9D9EE;border-radius:100px;border:2px solid #F7F9FC;}
+  .dc-scroll::-webkit-scrollbar-thumb:hover{background-color:#9CC7F5;}
 </style>
 </helmet>
 <div dir="rtl" style="display:flex;min-height:100vh;width:100%;background:#F4F7FB;">
@@ -161,7 +166,7 @@
 
       <sc-if value="{{ activeDomain.hasItems }}" hint-placeholder-val="{{ false }}">
         <sc-if value="{{ activeDomain.hasGroupedTable }}" hint-placeholder-val="{{ false }}">
-          <div style="margin-top:26px;max-height:65vh;overflow:auto;border-radius:14px;box-shadow:0 2px 8px rgba(15,46,82,.06);">
+          <div class="dc-scroll" style="margin-top:26px;max-height:65vh;overflow:auto;border-radius:14px;box-shadow:0 2px 8px rgba(15,46,82,.06);">
           <sc-for list="{{ activeDomain.groups }}" as="grp" hint-placeholder-count="2">
             <div>
               <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:{{ activeDomain.colorBg }};padding:12px 18px;position:sticky;top:0;z-index:3;">
@@ -208,7 +213,7 @@
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7M6 7l1 13h10l1-13"></path></svg>
                             </button>
                             <sc-if value="{{ item.hasWa }}" hint-placeholder-val="{{ false }}">
-                              <a href="{{ item.waLink }}" target="_blank" rel="noopener" style="width:30px;height:30px;border-radius:8px;background:#EAF7F1;color:#00764A;display:flex;align-items:center;justify-content:center;">
+                              <a href="{{ item.waLink }}" target="_blank" rel="noopener" aria-label="תזכורת בוואטסאפ" style="width:30px;height:30px;border-radius:8px;background:#EAF7F1;color:#00764A;display:flex;align-items:center;justify-content:center;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                               </a>
                             </sc-if>
@@ -230,7 +235,7 @@
           </div>
         </sc-if>
         <sc-if value="{{ activeDomain.hasFlatTable }}" hint-placeholder-val="{{ true }}">
-          <div style="margin-top:26px;max-height:65vh;background:#fff;border:1px solid #E4EAF1;border-radius:16px;overflow:auto;min-width:0;box-shadow:0 2px 8px rgba(15,46,82,.06);">
+          <div class="dc-scroll" style="margin-top:26px;max-height:65vh;background:#fff;border:1px solid #E4EAF1;border-radius:16px;overflow:auto;min-width:0;box-shadow:0 2px 8px rgba(15,46,82,.06);">
             <table style="width:100%;border-collapse:collapse;">
               <thead>
                 <tr>
@@ -265,7 +270,7 @@
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7M6 7l1 13h10l1-13"></path></svg>
                         </button>
                         <sc-if value="{{ item.hasWa }}" hint-placeholder-val="{{ false }}">
-                          <a href="{{ item.waLink }}" target="_blank" rel="noopener" style="width:30px;height:30px;border-radius:8px;background:#EAF7F1;color:#00764A;display:flex;align-items:center;justify-content:center;">
+                          <a href="{{ item.waLink }}" target="_blank" rel="noopener" aria-label="תזכורת בוואטסאפ" style="width:30px;height:30px;border-radius:8px;background:#EAF7F1;color:#00764A;display:flex;align-items:center;justify-content:center;">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                           </a>
                         </sc-if>
@@ -347,7 +352,7 @@
 const DOMAINS = [
   { key:'insurance', label:'ביטוחים', color:'#0055B2', bg:'#EAF2FD',
     iconPath:'M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z',
-    dateKey:'renewal', waKey:'phone',
+    dateKey:'renewal', waKey:'phone', waGroupDateKey:'renewal',
     fields:[
       { key:'type', label:'סוג ביטוח', type:'text', primary:true },
       { key:'owner', label:'שייך ל', type:'multiselect' },
@@ -387,19 +392,20 @@ const DOMAINS = [
     ], groupBy:'category' },
   { key:'vehicles', label:'רכבים', color:'#1F5F8B', bg:'#E8F1F8',
     iconPath:'M5 16v-3.2L6.6 8A2 2 0 0 1 8.5 6.7h7A2 2 0 0 1 17.4 8L19 12.8V16M5 16h14M5 16v2H7v-2M17 16v2h2v-2M8 12.5h8',
-    dateKey:'licenseExpiry', waKey:'insurancePhone',
+    dateKey:'licenseExpiry', waKey:'insurancePhone', waGroupDateKey:'insuranceExpiry',
     fields:[
       { key:'nickname', label:'רכב (דגם/כינוי)', type:'text', primary:true },
       { key:'plate', label:'מספר רישוי', type:'text' },
       { key:'licenseExpiry', label:'תוקף רישיון רכב', type:'date' },
       { key:'testDate', label:'תאריך טסט הבא', type:'date' },
       { key:'insuranceCompany', label:'חברת ביטוח', type:'text' },
-      { key:'insuranceType', label:'סוג ביטוח (חובה/מקיף)', type:'text' },
-      { key:'amount', label:'עלות חודשית', type:'text' },
+      { key:'comprehensiveCost', label:'עלות ביטוח מקיף', type:'text' },
+      { key:'mandatoryCost', label:'עלות ביטוח חובה', type:'text' },
+      { key:'licenseCost', label:'עלות רישיון רכב', type:'text' },
       { key:'insuranceExpiry', label:'תוקף ביטוח', type:'date' },
       { key:'insurancePhone', label:'טלפון חברת הביטוח', type:'tel' },
       { key:'notes', label:'הערות', type:'textarea' },
-    ], hasTotalSummary:true, totalAmountKey:'amount', totalLabelText:'סה"כ הוצאה חודשית' },
+    ], hasTotalSummary:true, totalAmountKeys:['comprehensiveCost','mandatoryCost','licenseCost'], totalLabelText:'סה"כ הוצאה חודשית' },
   { key:'documents', label:'מסמכים חשובים', color:'#9C6B12', bg:'#FBF1E1',
     iconPath:'M6 3h7l5 5v13H6zM13 3v5h5',
     dateKey:'expiry', waKey:null,
@@ -431,6 +437,7 @@ const DOMAINS = [
       { key:'notes', label:'הערות', type:'textarea' },
     ], hasMonthlySummary:true, summaryDateKey:'date', summaryAmountKey:'amount' },
 ];
+const WA_GROUP_LINK = 'https://chat.whatsapp.com/ER9EGi2GxgS6fv3xS7hsdM?s=cl&p=i&ilr=4';
 const HOME_ICON = 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10';
 const STORAGE_KEY = 'finhub_data_v1';
 const STORAGE_CATS_KEY = 'finhub_categories_v1';
@@ -772,9 +779,14 @@ class Component extends DCLogic {
         const primaryField = d.fields.find(f => f.primary);
         const days = self.daysUntil(dateVal);
         const badge = self.badgeFor(days);
-        const phone = d.waKey ? item[d.waKey] : '';
         const name = item[primaryField.key] || d.label;
-        const wa = phone ? self.waLink(phone, 'שלום! תזכורת לגבי ' + name + ' - ' + self.formatDate(dateVal) + '.') : '';
+        let wa = '';
+        if (d.waGroupDateKey === d.dateKey) {
+          wa = days <= 30 ? WA_GROUP_LINK : '';
+        } else {
+          const phone = d.waKey ? item[d.waKey] : '';
+          wa = phone ? self.waLink(phone, 'שלום! תזכורת לגבי ' + name + ' - ' + self.formatDate(dateVal) + '.') : '';
+        }
         upcomingRaw.push({
           sortVal: dateVal, name: name, domainLabel: d.label, domainColor: d.color,
           dateLabel: self.formatDate(dateVal),
@@ -828,8 +840,14 @@ class Component extends DCLogic {
         const cells = d.fields.map(f => ({ value: f.type === 'date' ? (self.formatDate(item[f.key]) || '—') : (item[f.key] || '—') }));
         const days = d.dateKey ? self.daysUntil(item[d.dateKey]) : null;
         const badge = days !== null ? self.badgeFor(days) : null;
-        const phone = d.waKey ? item[d.waKey] : '';
-        const wa = phone ? self.waLink(phone, 'שלום! תזכורת לגבי ' + (item[primaryField.key] || d.label) + '.') : '';
+        let wa = '';
+        if (d.waGroupDateKey) {
+          const waDays = self.daysUntil(item[d.waGroupDateKey]);
+          wa = (waDays !== null && waDays <= 30) ? WA_GROUP_LINK : '';
+        } else {
+          const phone = d.waKey ? item[d.waKey] : '';
+          wa = phone ? self.waLink(phone, 'שלום! תזכורת לגבי ' + (item[primaryField.key] || d.label) + '.') : '';
+        }
         return {
           id: item.id,
           cells: cells,
@@ -890,7 +908,8 @@ class Component extends DCLogic {
 
       let totalSummaryLabel = null;
       if (d.hasTotalSummary) {
-        const sum = rawItems.reduce((s, it) => s + self.parseAmount(it[d.totalAmountKey]), 0);
+        const amountKeys = d.totalAmountKeys || [d.totalAmountKey];
+        const sum = rawItems.reduce((s, it) => s + amountKeys.reduce((s2, k) => s2 + self.parseAmount(it[k]), 0), 0);
         totalSummaryLabel = sum ? (sum.toLocaleString('he-IL') + ' ₪') : '—';
       }
 
