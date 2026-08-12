@@ -481,6 +481,34 @@ function mergeCategories(parsed) {
   }
   return merged;
 }
+function normalizeDateValue(v) {
+  if (!v || /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return v;
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return yyyy + '-' + mm + '-' + dd;
+}
+function normalizeData(data) {
+  let changed = false;
+  const next = {};
+  DOMAINS.forEach(d => {
+    const dateKeys = d.fields.filter(f => f.type === 'date').map(f => f.key);
+    next[d.key] = (data[d.key] || []).map(item => {
+      if (!dateKeys.length) return item;
+      let itemChanged = false;
+      const newItem = Object.assign({}, item);
+      dateKeys.forEach(k => {
+        const fixed = normalizeDateValue(item[k]);
+        if (fixed !== item[k]) { newItem[k] = fixed; itemChanged = true; }
+      });
+      if (itemChanged) changed = true;
+      return itemChanged ? newItem : item;
+    });
+  });
+  return { data: next, changed: changed };
+}
 function toCsvValue(v) {
   const s = String(v == null ? '' : v);
   if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
@@ -507,7 +535,10 @@ class Component extends DCLogic {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        this.setState({ data: Object.assign({}, EMPTY_DATA, parsed) });
+        const merged = Object.assign({}, EMPTY_DATA, parsed);
+        const norm = normalizeData(merged);
+        this.setState({ data: norm.data });
+        if (norm.changed) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(norm.data)); } catch (e) {} }
       }
     } catch (e) {}
     try {
@@ -646,13 +677,19 @@ class Component extends DCLogic {
     window[cbName] = (res) => {
       if (!res || !res.data) { self.setState({ syncStatus: 'stale' }); cleanup(); return; }
       const merged = Object.assign({}, EMPTY_DATA, res.data);
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(merged)); } catch (e) {}
-      const next = { data: merged, syncStatus: 'synced' };
+      const norm = normalizeData(merged);
+      const next = { syncStatus: 'synced' };
       if (res.categories) {
         next.categories = mergeCategories(res.categories);
         try { localStorage.setItem(STORAGE_CATS_KEY, JSON.stringify(res.categories)); } catch (e) {}
       }
       self.setState(next);
+      if (norm.changed) {
+        self.persist(norm.data);
+      } else {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(norm.data)); } catch (e) {}
+        self.setState({ data: norm.data });
+      }
       cleanup();
     };
     script.onerror = () => { if (!done) { self.setState({ syncStatus: 'error' }); cleanup(); } };
