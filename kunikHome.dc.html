@@ -242,6 +242,9 @@
                   <sc-for list="{{ activeDomain.columns }}" as="col" hint-placeholder-count="4">
                     <th style="text-align:right;padding:13px 16px;font-size:12.5px;font-weight:800;color:#6A6D70;background:#F7F9FC;border-bottom:1px solid #E4EAF1;white-space:nowrap;">{{ col.label }}</th>
                   </sc-for>
+                  <sc-if value="{{ activeDomain.hasComputedColumn }}" hint-placeholder-val="{{ false }}">
+                    <th style="text-align:right;padding:13px 16px;font-size:12.5px;font-weight:800;color:#6A6D70;background:#F7F9FC;border-bottom:1px solid #E4EAF1;white-space:nowrap;">{{ activeDomain.computedColumnLabel }}</th>
+                  </sc-if>
                   <sc-if value="{{ activeDomain.hasStatusColumn }}" hint-placeholder-val="{{ false }}">
                     <th style="text-align:right;padding:13px 16px;font-size:12.5px;font-weight:800;color:#6A6D70;background:#F7F9FC;border-bottom:1px solid #E4EAF1;white-space:nowrap;">סטטוס</th>
                   </sc-if>
@@ -254,6 +257,9 @@
                     <sc-for list="{{ item.cells }}" as="cell" hint-placeholder-count="4">
                       <td style="padding:13px 16px;font-size:13.5px;color:#121213;border-bottom:1px solid #F0F3F7;">{{ cell.value }}</td>
                     </sc-for>
+                    <sc-if value="{{ activeDomain.hasComputedColumn }}" hint-placeholder-val="{{ false }}">
+                      <td style="padding:13px 16px;font-size:13.5px;color:#121213;border-bottom:1px solid #F0F3F7;font-weight:700;">{{ item.computedValue }}</td>
+                    </sc-if>
                     <sc-if value="{{ activeDomain.hasStatusColumn }}" hint-placeholder-val="{{ false }}">
                       <td style="padding:13px 16px;border-bottom:1px solid #F0F3F7;">
                         <sc-if value="{{ item.hasDateBadge }}" hint-placeholder-val="{{ false }}">
@@ -308,9 +314,6 @@
             </sc-if>
             <sc-if value="{{ f.isInput }}" hint-placeholder-val="{{ true }}">
               <input id="{{ f.fieldId }}" type="{{ f.type }}" value="{{ f.value }}" onChange="{{ f.onChange }}" style="padding:10px 12px;border-radius:10px;border:1px solid #E4EAF1;font-size:14.5px;background:#F7F9FC;" />
-            </sc-if>
-            <sc-if value="{{ f.isDateInput }}" hint-placeholder-val="{{ false }}">
-              <input id="{{ f.fieldId }}" type="text" inputmode="numeric" placeholder="dd/mm/yyyy" value="{{ f.value }}" onChange="{{ f.onChange }}" style="padding:10px 12px;border-radius:10px;border:1px solid #E4EAF1;font-size:14.5px;background:#F7F9FC;" />
             </sc-if>
             <sc-if value="{{ f.isSelect }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;gap:8px;">
@@ -408,7 +411,8 @@ const DOMAINS = [
       { key:'insuranceExpiry', label:'תוקף ביטוח', type:'date' },
       { key:'insurancePhone', label:'טלפון חברת הביטוח', type:'tel' },
       { key:'notes', label:'הערות', type:'textarea' },
-    ], hasTotalSummary:true, totalAmountKeys:['comprehensiveCost','mandatoryCost','licenseCost'], totalLabelText:'סה"כ הוצאה חודשית' },
+    ], hasTotalSummary:true, totalAmountKeys:['comprehensiveCost','mandatoryCost','licenseCost'], totalAmountDivisor:12, totalLabelText:'סה"כ הוצאה חודשית',
+    computedMonthlyKeys:['comprehensiveCost','mandatoryCost','licenseCost'], computedMonthlyLabel:'עלות חודשית ממוצעת' },
   { key:'documents', label:'מסמכים חשובים', color:'#9C6B12', bg:'#FBF1E1',
     iconPath:'M6 3h7l5 5v13H6zM13 3v5h5',
     dateKey:'expiry', waKey:null,
@@ -666,12 +670,7 @@ class Component extends DCLogic {
   }
 
   openEditForm(sectionKey, item) {
-    const domain = this.domainByKey(sectionKey);
-    const values = Object.assign({}, item);
-    domain.fields.forEach(f => {
-      if (f.type === 'date' && values[f.key]) values[f.key] = this.formatDate(values[f.key]);
-    });
-    this.setState({ formOpen: true, editingSection: sectionKey, editingId: item.id, formValues: values });
+    this.setState({ formOpen: true, editingSection: sectionKey, editingId: item.id, formValues: Object.assign({}, item) });
   }
 
   closeForm() {
@@ -686,10 +685,7 @@ class Component extends DCLogic {
     const domain = this.domainByKey(this.state.editingSection);
     if (!domain) return;
     const primaryField = domain.fields.find(f => f.primary);
-    const values = Object.assign({}, this.state.formValues);
-    domain.fields.forEach(f => {
-      if (f.type === 'date') values[f.key] = values[f.key] ? this.parseDateInput(values[f.key]) : '';
-    });
+    const values = this.state.formValues;
     if (primaryField && !((values[primaryField.key] || '').trim())) {
       alert('נא למלא את השדה "' + primaryField.label + '"');
       return;
@@ -717,20 +713,6 @@ class Component extends DCLogic {
     const parts = iso.split('-');
     if (parts.length !== 3) return iso;
     return parts[2] + '/' + parts[1] + '/' + parts[0];
-  }
-
-  formatDateInput(raw) {
-    const digits = String(raw || '').replace(/\D/g, '').slice(0, 8);
-    let out = digits.slice(0, 2);
-    if (digits.length > 2) out += '/' + digits.slice(2, 4);
-    if (digits.length > 4) out += '/' + digits.slice(4, 8);
-    return out;
-  }
-
-  parseDateInput(display) {
-    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(display || '').trim());
-    if (!m) return '';
-    return m[3] + '-' + m[2] + '-' + m[1];
   }
 
   daysUntil(iso) {
@@ -873,9 +855,15 @@ class Component extends DCLogic {
           const phone = d.waKey ? item[d.waKey] : '';
           wa = phone ? self.waLink(phone, 'שלום! תזכורת לגבי ' + (item[primaryField.key] || d.label) + '.') : '';
         }
+        let computedValue = '';
+        if (d.computedMonthlyKeys) {
+          const sum = d.computedMonthlyKeys.reduce((s, k) => s + self.parseAmount(item[k]), 0) / 12;
+          computedValue = sum ? (Math.round(sum * 100) / 100).toLocaleString('he-IL') + ' ₪' : '—';
+        }
         return {
           id: item.id,
           cells: cells,
+          computedValue: computedValue,
           hasDateBadge: !!badge,
           badgeBg: badge ? badge.bg : '',
           badgeColor: badge ? badge.color : '',
@@ -934,8 +922,9 @@ class Component extends DCLogic {
       let totalSummaryLabel = null;
       if (d.hasTotalSummary) {
         const amountKeys = d.totalAmountKeys || [d.totalAmountKey];
-        const sum = rawItems.reduce((s, it) => s + amountKeys.reduce((s2, k) => s2 + self.parseAmount(it[k]), 0), 0);
-        totalSummaryLabel = sum ? (sum.toLocaleString('he-IL') + ' ₪') : '—';
+        const divisor = d.totalAmountDivisor || 1;
+        const sum = rawItems.reduce((s, it) => s + amountKeys.reduce((s2, k) => s2 + self.parseAmount(it[k]), 0), 0) / divisor;
+        totalSummaryLabel = sum ? ((Math.round(sum * 100) / 100).toLocaleString('he-IL') + ' ₪') : '—';
       }
 
       const filtered = query && items.length !== rawItemsAll.length;
@@ -946,6 +935,8 @@ class Component extends DCLogic {
           : (items.length === 0 ? 'אין רשומות עדיין' : (items.length + (items.length === 1 ? ' רשומה' : ' רשומות'))),
         columns: columns,
         hasStatusColumn: !!d.dateKey,
+        hasComputedColumn: !!d.computedMonthlyKeys,
+        computedColumnLabel: d.computedMonthlyLabel || '',
         hasGroupedTable: !!(d.hasMonthlySummary || d.groupBy),
         hasFlatTable: !d.hasMonthlySummary && !d.groupBy,
         hasTotalSummary: !!d.hasTotalSummary,
@@ -980,15 +971,13 @@ class Component extends DCLogic {
         const selectedList = isMultiSelect
           ? String(state.formValues[f.key] || '').split(',').map(s => s.trim()).filter(Boolean)
           : [];
-        const isDateInput = f.type === 'date';
         return {
           key: f.key, label: f.label, fieldId: 'field-' + d.key + '-' + f.key,
           type: (f.type === 'textarea' || isSelect || isMultiSelect) ? 'text' : f.type,
           isTextarea: f.type === 'textarea',
           isSelect: isSelect,
           isMultiSelect: isMultiSelect,
-          isDateInput: isDateInput,
-          isInput: f.type !== 'textarea' && !isSelect && !isMultiSelect && !isDateInput,
+          isInput: f.type !== 'textarea' && !isSelect && !isMultiSelect,
           value: state.formValues[f.key] || '',
           options: isSelect ? fieldOptions : [],
           optionItems: isMultiSelect ? fieldOptions.map(opt => ({
@@ -997,9 +986,7 @@ class Component extends DCLogic {
             onToggle: () => self.toggleMultiValue(f.key, opt),
           })) : [],
           onAddOption: isSelect ? (() => self.addCategory(d.key, f.key, (name) => self.updateField(f.key, name))) : null,
-          onChange: isDateInput
-            ? ((e) => self.updateField(f.key, self.formatDateInput(e.target.value)))
-            : ((e) => self.updateField(f.key, e.target.value)),
+          onChange: (e) => self.updateField(f.key, e.target.value),
         };
       });
     }
