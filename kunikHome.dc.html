@@ -141,6 +141,36 @@
         </div>
       </sc-if>
 
+      <sc-if value="{{ hasExpenseChart }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:36px;">
+          <p style="font-size:13px;font-weight:800;color:#6A6D70;letter-spacing:.4px;margin:0 0 12px;">חלוקת ההוצאות החודשיות</p>
+          <div style="background:#fff;border:1px solid #E4EAF1;border-radius:18px;padding:26px 28px;box-shadow:0 2px 8px rgba(15,46,82,.06);display:flex;align-items:center;gap:32px;flex-wrap:wrap;">
+            <div style="position:relative;width:160px;height:160px;flex:none;">
+              <svg width="160" height="160" viewBox="0 0 160 160" style="transform:rotate(-90deg);">
+                <circle cx="80" cy="80" r="70" fill="none" stroke="#F0F3F7" stroke-width="22"></circle>
+                <sc-for list="{{ expenseSlices }}" as="sl" hint-placeholder-count="2">
+                  <circle cx="80" cy="80" r="70" fill="none" stroke="{{ sl.color }}" stroke-width="22" stroke-dasharray="{{ sl.dashArray }}" stroke-dashoffset="{{ sl.dashOffset }}"></circle>
+                </sc-for>
+              </svg>
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                <span style="font-size:11px;font-weight:700;color:#8D9296;">סה"כ לחודש</span>
+                <span style="font-size:16.5px;font-weight:800;color:#121213;">{{ expenseTotalLabel }}</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;flex:1;min-width:180px;">
+              <sc-for list="{{ expenseLegend }}" as="lg" hint-placeholder-count="2">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <span style="width:11px;height:11px;border-radius:3px;flex:none;background:{{ lg.color }};"></span>
+                  <span style="flex:1;font-size:13.5px;font-weight:700;color:#121213;">{{ lg.label }}</span>
+                  <span style="font-size:13px;font-weight:700;color:#6A6D70;">{{ lg.percentLabel }}</span>
+                  <span style="font-size:13.5px;font-weight:800;color:#121213;min-width:70px;text-align:left;">{{ lg.valueLabel }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
       <div style="margin-top:36px;">
         <p style="font-size:13px;font-weight:800;color:#6A6D70;letter-spacing:.4px;margin:0 0 12px;">התראות קרובות</p>
         <div style="background:#fff;border:1px solid #E4EAF1;border-radius:18px;box-shadow:0 2px 8px rgba(15,46,82,.06);overflow:hidden;">
@@ -467,16 +497,6 @@ const DOMAINS = [
       { key:'notes', label:'הערות', type:'textarea' },
     ], hasTotalSummary:true, totalAmountKeys:['comprehensiveCost','mandatoryCost','licenseCost'], totalAmountDivisor:12, totalLabelText:'סה"כ הוצאה חודשית',
     computedMonthlyKeys:['comprehensiveCost','mandatoryCost','licenseCost'], computedMonthlyLabel:'עלות חודשית ממוצעת' },
-  { key:'documents', label:'מסמכים חשובים', color:'#9C6B12', bg:'#FBF1E1',
-    iconPath:'M6 3h7l5 5v13H6zM13 3v5h5',
-    dateKey:'expiry', waKey:null,
-    fields:[
-      { key:'name', label:'שם המסמך', type:'text', primary:true },
-      { key:'category', label:'קטגוריה', type:'select' },
-      { key:'location', label:'איפה נמצא', type:'text' },
-      { key:'expiry', label:'תוקף (אם רלוונטי)', type:'date' },
-      { key:'notes', label:'הערות', type:'textarea' },
-    ], groupBy:'category' },
   { key:'payments', label:'תזכורות לתשלומים', color:'#6E4FA3', bg:'#F1ECFA',
     iconPath:'M12 3a5 5 0 0 0-5 5v3c0 1.2-.5 2.3-1.4 3.1L4 16h16l-1.6-1.9C17.5 13.3 17 12.2 17 11V8a5 5 0 0 0-5-5zM9.5 19a2.5 2.5 0 0 0 5 0',
     dateKey:'dueDate', waKey:'phone',
@@ -504,12 +524,11 @@ const STORAGE_KEY = 'finhub_data_v1';
 const STORAGE_CATS_KEY = 'finhub_categories_v1';
 const STORAGE_COLWIDTHS_KEY = 'finhub_colwidths_v1';
 const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycby4vjW_P4KzHwKnuLIwFSO3B7n9oofY9A-5UAJbpPOLlAELvmEpSLfN9bKGuW7g2nv0-w/exec';
-const DEFAULT_DOC_CATEGORIES = ['רפואי', 'פיננסי', 'נדל"ן', 'משפטי', 'ביטוח', 'אחר'];
 const DEFAULT_SAVINGS_OWNERS = ['דנה', 'אלון'];
 const DEFAULT_HEALTH_OWNERS = ['דנה', 'אלון', 'איתי', 'בן'];
 const DEFAULT_INSURANCE_OWNERS = ['דנה', 'אלון', 'איתי', 'בן'];
 const HEBREW_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
-const EMPTY_DATA = { insurance:[], income:[], savings:[], vehicles:[], health:[], documents:[], payments:[] };
+const EMPTY_DATA = { insurance:[], income:[], savings:[], vehicles:[], health:[], payments:[] };
 const STATUS_COLORS = {
   urgent: { bg:'#FBEAEC', color:'#B23A48' },
   soon: { bg:'#FBF1E1', color:'#9C6B12' },
@@ -517,7 +536,6 @@ const STATUS_COLORS = {
 };
 function defaultCategories() {
   return {
-    documents: { category: DEFAULT_DOC_CATEGORIES.slice() },
     savings: { owner: DEFAULT_SAVINGS_OWNERS.slice(), category: [] },
     health: { owner: DEFAULT_HEALTH_OWNERS.slice(), category: [] },
     insurance: { owner: DEFAULT_INSURANCE_OWNERS.slice(), category: [] },
@@ -997,6 +1015,33 @@ class Component extends DCLogic {
       };
     });
 
+    // חלוקת ההוצאות החודשיות הקבועות לפי תחום (דונאט)
+    const donutR = 70, donutCircumference = 2 * Math.PI * donutR;
+    const expenseRaw = DOMAINS.filter(d => d.hasTotalSummary).map(d => {
+      const domainItems = state.data[d.key] || [];
+      const amountKeys = d.totalAmountKeys || [d.totalAmountKey];
+      const divisor = d.totalAmountDivisor || 1;
+      const sum = domainItems.reduce((s, it) => s + amountKeys.reduce((s2, k) => s2 + self.parseAmount(it[k]), 0), 0) / divisor;
+      return { key: d.key, label: d.label, color: d.color, value: Math.round(sum * 100) / 100 };
+    }).filter(x => x.value > 0);
+    const expenseTotalMonthly = expenseRaw.reduce((s, x) => s + x.value, 0);
+    let expenseCursor = 0;
+    const expenseSlices = expenseRaw.map(x => {
+      const dash = expenseTotalMonthly ? (x.value / expenseTotalMonthly) * donutCircumference : 0;
+      const slice = {
+        key: x.key, color: x.color,
+        dashArray: dash.toFixed(1) + ' ' + (donutCircumference - dash).toFixed(1),
+        dashOffset: (-expenseCursor).toFixed(1),
+      };
+      expenseCursor += dash;
+      return slice;
+    });
+    const expenseLegend = expenseRaw.map(x => ({
+      key: x.key, label: x.label, color: x.color,
+      valueLabel: x.value.toLocaleString('he-IL') + ' ₪',
+      percentLabel: expenseTotalMonthly ? Math.round((x.value / expenseTotalMonthly) * 100) + '%' : '0%',
+    }));
+
     const isHome = state.activeSection === 'home';
     let activeDomain = null;
     if (!isHome) {
@@ -1242,6 +1287,10 @@ class Component extends DCLogic {
       chartBars: chartBars,
       hasChart: chartBars.length > 0,
       noChart: chartBars.length === 0,
+      expenseSlices: expenseSlices,
+      expenseLegend: expenseLegend,
+      expenseTotalLabel: expenseTotalMonthly ? (Math.round(expenseTotalMonthly * 100) / 100).toLocaleString('he-IL') + ' ₪' : '—',
+      hasExpenseChart: expenseRaw.length > 0,
       upcoming: upcoming,
       hasUpcoming: upcoming.length > 0,
       noUpcoming: upcoming.length === 0,
