@@ -889,7 +889,13 @@ class Component extends DCLogic {
       formFields = d.fields.map(f => {
         const isSelect = f.type === 'select';
         const isMultiSelect = f.type === 'multiselect';
-        const fieldOptions = (state.categories[d.key] && state.categories[d.key][f.key]) || [];
+        const curatedOptions = (state.categories[d.key] && state.categories[d.key][f.key]) || [];
+        const usedValues = (f.type === 'select')
+          ? (state.data[d.key] || []).map(it => (it[f.key] || '').trim()).filter(Boolean)
+          : (f.type === 'multiselect')
+            ? (state.data[d.key] || []).reduce((acc, it) => acc.concat(String(it[f.key] || '').split(',').map(s => s.trim()).filter(Boolean)), [])
+            : [];
+        const fieldOptions = Array.from(new Set(curatedOptions.concat(usedValues)));
         const selectedList = isMultiSelect
           ? String(state.formValues[f.key] || '').split(',').map(s => s.trim()).filter(Boolean)
           : [];
