@@ -300,6 +300,7 @@
             <sc-if value="{{ f.isSelect }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;gap:8px;">
                 <select id="{{ f.fieldId }}" value="{{ f.value }}" onChange="{{ f.onChange }}" style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid #E4EAF1;font-size:14.5px;background:#F7F9FC;">
+                  <option value="">בחר</option>
                   <sc-for list="{{ f.options }}" as="opt" hint-placeholder-count="4">
                     <option value="{{ opt }}">{{ opt }}</option>
                   </sc-for>
@@ -315,7 +316,6 @@
                     {{ opt.label }}
                   </label>
                 </sc-for>
-                <button onClick="{{ f.onAddOption }}" type="button" aria-label="הוספת אפשרות חדשה" style="flex:none;width:36px;border-radius:10px;border:1px solid #E4EAF1;background:#F7F9FC;color:#585B5E;font-size:16px;font-weight:700;cursor:pointer;">+</button>
               </div>
             </sc-if>
           </div>
@@ -913,10 +913,7 @@ class Component extends DCLogic {
             checked: selectedList.indexOf(opt) !== -1,
             onToggle: () => self.toggleMultiValue(f.key, opt),
           })) : [],
-          onAddOption: (isSelect || isMultiSelect) ? (() => self.addCategory(d.key, f.key, (name) => {
-            if (isMultiSelect) self.toggleMultiValue(f.key, name);
-            else self.updateField(f.key, name);
-          })) : null,
+          onAddOption: isSelect ? (() => self.addCategory(d.key, f.key, (name) => self.updateField(f.key, name))) : null,
           onChange: (e) => self.updateField(f.key, e.target.value),
         };
       });
