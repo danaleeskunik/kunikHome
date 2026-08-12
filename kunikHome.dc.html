@@ -161,13 +161,19 @@
 
       <sc-if value="{{ activeDomain.hasItems }}" hint-placeholder-val="{{ false }}">
         <sc-if value="{{ activeDomain.hasGroupedTable }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:26px;max-height:65vh;overflow:auto;border-radius:14px;box-shadow:0 2px 8px rgba(15,46,82,.06);">
           <sc-for list="{{ activeDomain.groups }}" as="grp" hint-placeholder-count="2">
-            <div style="margin-top:26px;">
-              <div style="display:flex;align-items:center;justify-content:space-between;background:{{ activeDomain.colorBg }};padding:12px 18px;border-radius:12px 12px 0 0;">
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:{{ activeDomain.colorBg }};padding:12px 18px;position:sticky;top:0;z-index:3;">
                 <span style="font-weight:800;font-size:15px;color:{{ activeDomain.color }};">{{ grp.label }}</span>
-                <span style="font-weight:800;font-size:15px;color:{{ activeDomain.color }};">סה"כ: {{ grp.totalLabel }}</span>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <span style="font-weight:800;font-size:15px;color:{{ activeDomain.color }};">סה"כ: {{ grp.totalLabel }}</span>
+                  <button onClick="{{ grp.exportCsv }}" type="button" aria-label="ייצוא קטגוריה לאקסל" style="width:28px;height:28px;border-radius:8px;border:none;background:rgba(255,255,255,.6);color:{{ activeDomain.color }};display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 10.5L12 15l4.5-4.5M4 19h16"></path></svg>
+                  </button>
+                </div>
               </div>
-              <div style="background:#fff;border:1px solid #E4EAF1;border-top:none;border-radius:0 0 14px 14px;overflow:auto;min-width:0;box-shadow:0 2px 8px rgba(15,46,82,.06);">
+              <div style="background:#fff;border:1px solid #E4EAF1;border-top:none;min-width:0;">
                 <table style="width:100%;border-collapse:collapse;">
                   <thead>
                     <tr>
@@ -215,6 +221,7 @@
               </div>
             </div>
           </sc-for>
+          </div>
         </sc-if>
         <sc-if value="{{ activeDomain.hasTotalSummary }}" hint-placeholder-val="{{ false }}">
           <div style="margin-top:26px;display:flex;align-items:center;justify-content:space-between;background:{{ activeDomain.colorBg }};padding:14px 20px;border-radius:14px;">
@@ -223,7 +230,7 @@
           </div>
         </sc-if>
         <sc-if value="{{ activeDomain.hasFlatTable }}" hint-placeholder-val="{{ true }}">
-          <div style="margin-top:26px;background:#fff;border:1px solid #E4EAF1;border-radius:16px;overflow:auto;min-width:0;box-shadow:0 2px 8px rgba(15,46,82,.06);">
+          <div style="margin-top:26px;max-height:65vh;background:#fff;border:1px solid #E4EAF1;border-radius:16px;overflow:auto;min-width:0;box-shadow:0 2px 8px rgba(15,46,82,.06);">
             <table style="width:100%;border-collapse:collapse;">
               <thead>
                 <tr>
@@ -460,6 +467,11 @@ function mergeCategories(parsed) {
   }
   return merged;
 }
+function toCsvValue(v) {
+  const s = String(v == null ? '' : v);
+  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
 
 class Component extends DCLogic {
   state = {
@@ -501,6 +513,21 @@ class Component extends DCLogic {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'גיבוי-מרכז-כלכלי-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  exportGroupToCsv(domain, groupLabel, rawItems) {
+    const headers = domain.fields.map(f => f.label);
+    const rows = rawItems.map(it => domain.fields.map(f => f.type === 'date' ? this.formatDate(it[f.key]) : (it[f.key] || '')));
+    const csv = [headers].concat(rows).map(r => r.map(toCsvValue).join(',')).join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = domain.label + ' - ' + groupLabel + '.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -823,13 +850,18 @@ class Component extends DCLogic {
           const dateVal = item[d.summaryDateKey];
           const mKey = dateVal ? dateVal.slice(0, 7) : 'zzz-none';
           const mLabel = dateVal ? self.monthLabel(dateVal) : 'ללא תאריך';
-          if (!groupsMap[mKey]) groupsMap[mKey] = { key: mKey, label: mLabel, total: 0, items: [] };
+          if (!groupsMap[mKey]) groupsMap[mKey] = { key: mKey, label: mLabel, total: 0, items: [], rawItems: [] };
           groupsMap[mKey].items.push(items[idx]);
+          groupsMap[mKey].rawItems.push(item);
           groupsMap[mKey].total += self.parseAmount(item[d.summaryAmountKey]);
         });
         groups = Object.keys(groupsMap).sort((a, b) => b.localeCompare(a)).map(k => {
           const g = groupsMap[k];
-          return { key: g.key, label: g.label, items: g.items, totalLabel: g.total ? (g.total.toLocaleString('he-IL') + ' ₪') : '—' };
+          return {
+            key: g.key, label: g.label, items: g.items,
+            totalLabel: g.total ? (g.total.toLocaleString('he-IL') + ' ₪') : '—',
+            exportCsv: () => self.exportGroupToCsv(d, g.label, g.rawItems),
+          };
         });
       } else if (d.groupBy) {
         const groupsMap = {};
@@ -837,8 +869,9 @@ class Component extends DCLogic {
           const val = String(item[d.groupBy] || '').trim();
           const gKey = val || 'zzz-none';
           const gLabel = val || 'ללא קטגוריה';
-          if (!groupsMap[gKey]) groupsMap[gKey] = { key: gKey, label: gLabel, items: [] };
+          if (!groupsMap[gKey]) groupsMap[gKey] = { key: gKey, label: gLabel, items: [], rawItems: [] };
           groupsMap[gKey].items.push(items[idx]);
+          groupsMap[gKey].rawItems.push(item);
         });
         groups = Object.keys(groupsMap).sort((a, b) => {
           if (a === 'zzz-none') return 1;
@@ -847,7 +880,11 @@ class Component extends DCLogic {
         }).map(k => {
           const g = groupsMap[k];
           const count = g.items.length;
-          return { key: g.key, label: g.label, items: g.items, totalLabel: count + (count === 1 ? ' רשומה' : ' רשומות') };
+          return {
+            key: g.key, label: g.label, items: g.items,
+            totalLabel: count + (count === 1 ? ' רשומה' : ' רשומות'),
+            exportCsv: () => self.exportGroupToCsv(d, g.label, g.rawItems),
+          };
         });
       }
 
