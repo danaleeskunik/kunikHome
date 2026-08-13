@@ -13,6 +13,7 @@
 </template>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&family=Heebo:wght@400;700;800;900&display=swap">
 <style>
   *{box-sizing:border-box;}
@@ -45,9 +46,10 @@
     .dc-sidebar-nav{flex-direction:row!important;flex:1;min-width:0;overflow-x:auto;gap:6px!important;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
     .dc-sidebar-nav::-webkit-scrollbar{display:none;}
     .dc-sidebar-nav button{width:auto!important;flex:none;white-space:nowrap;padding:9px 12px!important;}
-    .dc-sidebar-footer{flex-direction:row!important;margin-top:0!important;padding-top:0!important;border-top:none!important;flex:none;gap:6px!important;}
+    .dc-sidebar-footer{flex-direction:row!important;flex-wrap:wrap;justify-content:flex-end;margin-top:0!important;padding-top:0!important;border-top:none!important;flex:none;gap:6px!important;max-width:130px;}
     .dc-sidebar-footer-btn{padding:9px!important;}
     .dc-sidebar-footer-label{display:none;}
+    .dc-sync-label{font-size:11px!important;}
     .dc-main{padding:20px 16px 40px!important;}
   }
   @media (max-width:520px){
@@ -65,11 +67,17 @@
       </div>
       <div>
         <h1 style="margin:0 0 6px;font-size:19px;font-weight:800;color:#121213;">Kunik Home</h1>
-        <p style="margin:0;font-size:13.5px;color:#6A6D70;">הכניסו סיסמה כדי להמשיך</p>
+        <p style="margin:0;font-size:13.5px;color:#6A6D70;">התחברו כדי להמשיך</p>
+      </div>
+      <div ref="{{ loginButtonRef }}" style="min-height:44px;width:100%;display:flex;align-items:center;justify-content:center;"></div>
+      <div style="display:flex;align-items:center;gap:10px;width:100%;color:#8D9296;font-size:12.5px;">
+        <div style="flex:1;height:1px;background:#E4EAF1;"></div>
+        או
+        <div style="flex:1;height:1px;background:#E4EAF1;"></div>
       </div>
       <input type="password" value="{{ loginInput }}" onChange="{{ onLoginInputChange }}" placeholder="סיסמה" style="width:100%;padding:13px 14px;border-radius:10px;border:1px solid #DFE2E4;font-size:15px;text-align:center;background:#F7F9FC;" />
       <sc-if value="{{ authError }}" hint-placeholder-val="{{ false }}">
-        <p style="margin:0;font-size:13px;color:#B23A48;font-weight:600;">סיסמה שגויה, נסו שוב.</p>
+        <p style="margin:0;font-size:13px;color:#B23A48;font-weight:600;">ההתחברות נכשלה, נסו שוב.</p>
       </sc-if>
       <button onClick="{{ onLoginSubmit }}" style="width:100%;background:#006EE5;color:#fff;border:none;border-radius:100px;padding:13px;font-size:14.5px;font-weight:800;cursor:pointer;">{{ loginButtonText }}</button>
     </div>
@@ -108,7 +116,7 @@
       <sc-if value="{{ showSync }}" hint-placeholder-val="{{ true }}">
         <button onClick="{{ reloadFromSheets }}" class="dc-sidebar-footer-btn" style="display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:10px;border:none;background:transparent;cursor:pointer;text-align:right;">
           <span style="width:8px;height:8px;border-radius:100px;flex:none;background:{{ syncDot }};"></span>
-          <span class="dc-sidebar-footer-label" style="font-size:12.5px;font-weight:600;color:{{ syncColor }};">{{ syncText }}</span>
+          <span class="dc-sync-label" style="font-size:12.5px;font-weight:600;color:{{ syncColor }};white-space:nowrap;">{{ syncText }}</span>
         </button>
       </sc-if>
     </div>
@@ -546,6 +554,8 @@ const STORAGE_KEY = 'finhub_data_v1';
 const STORAGE_CATS_KEY = 'finhub_categories_v1';
 const STORAGE_COLWIDTHS_KEY = 'finhub_colwidths_v1';
 const AUTH_KEY = 'finhub_auth_v1';
+const GOOGLE_AUTH_KEY = 'finhub_google_auth_v1';
+const GOOGLE_CLIENT_ID = '547196446091-mi9ngcdqdeucjk1qjo3ddnr8n5kluv3l.apps.googleusercontent.com';
 const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycby4vjW_P4KzHwKnuLIwFSO3B7n9oofY9A-5UAJbpPOLlAELvmEpSLfN9bKGuW7g2nv0-w/exec';
 const DEFAULT_SAVINGS_OWNERS = ['דנה', 'אלון'];
 const DEFAULT_HEALTH_OWNERS = ['דנה', 'אלון', 'איתי', 'בן'];
@@ -610,6 +620,13 @@ function toCsvValue(v) {
   if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
   return s;
 }
+function decodeJwtPayload(token) {
+  try {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(atob(base64).split('').map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+    return JSON.parse(json);
+  } catch (e) { return null; }
+}
 
 class Component extends DCLogic {
   state = {
@@ -628,14 +645,23 @@ class Component extends DCLogic {
     authError: false,
     storedPassword: '',
     loginInput: '',
+    googleIdToken: '',
+    googleEmail: '',
   };
 
   fileInputRef = React.createRef();
+  loginButtonRef = React.createRef();
 
   componentDidMount() {
     let storedPw = '';
     try { storedPw = localStorage.getItem(AUTH_KEY) || ''; } catch (e) {}
-    this.setState({ storedPassword: storedPw, loginInput: storedPw });
+    let storedToken = '';
+    try { storedToken = localStorage.getItem(GOOGLE_AUTH_KEY) || ''; } catch (e) {}
+    const decoded = storedToken ? decodeJwtPayload(storedToken) : null;
+    this.setState({
+      storedPassword: storedPw, loginInput: storedPw,
+      googleIdToken: storedToken, googleEmail: (decoded && decoded.email) || '',
+    });
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
@@ -660,12 +686,53 @@ class Component extends DCLogic {
         if (parsedWidths && typeof parsedWidths === 'object') this.setState({ colWidths: parsedWidths });
       }
     } catch (e) {}
-    this.loadFromSheets(storedPw);
+    this.loadFromSheets(storedPw, storedToken);
+    this._initGoogleAuth();
+    this._renderGoogleButton();
     this._onVisible = () => {
       if (document.visibilityState === 'visible') this.loadFromSheets();
     };
     document.addEventListener('visibilitychange', this._onVisible);
     window.addEventListener('pageshow', this._onVisible);
+  }
+
+  _initGoogleAuth() {
+    const self = this;
+    (function tryInit(triesLeft) {
+      if (window.google && window.google.accounts && window.google.accounts.id) {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: (response) => self.onGoogleSignIn(response),
+          auto_select: true,
+        });
+        return;
+      }
+      if (triesLeft > 0) setTimeout(() => tryInit(triesLeft - 1), 300);
+    })(30);
+  }
+
+  _renderGoogleButton() {
+    const self = this;
+    (function attempt(triesLeft) {
+      if (window.google && window.google.accounts && window.google.accounts.id && self.loginButtonRef.current) {
+        try {
+          window.google.accounts.id.renderButton(self.loginButtonRef.current, {
+            theme: 'outline', size: 'large', text: 'signin_with', shape: 'pill', width: 280,
+          });
+        } catch (e) {}
+        return;
+      }
+      if (triesLeft > 0) setTimeout(() => attempt(triesLeft - 1), 300);
+    })(30);
+  }
+
+  onGoogleSignIn(response) {
+    const token = response && response.credential;
+    if (!token) return;
+    const payload = decodeJwtPayload(token) || {};
+    try { localStorage.setItem(GOOGLE_AUTH_KEY, token); } catch (e) {}
+    this.setState({ googleIdToken: token, googleEmail: payload.email || '', authError: false });
+    this.loadFromSheets(undefined, token);
   }
 
   componentWillUnmount() {
@@ -775,6 +842,7 @@ class Component extends DCLogic {
     window[cbName] = (res) => {
       if (res && res.status === 'unauthorized') {
         self.setState({ authed: false, syncStatus: 'idle' });
+        setTimeout(() => self._renderGoogleButton(), 50);
       } else {
         self.setState({ syncStatus: (res && res.status === 'ok') ? 'synced' : 'error' });
       }
@@ -783,15 +851,17 @@ class Component extends DCLogic {
     script.onerror = () => { if (!done) { self.setState({ syncStatus: 'error' }); cleanup(); } };
     script.src = SHEETS_WEBAPP_URL + '?action=save&callback=' + cbName
       + '&payload=' + encodeURIComponent(payload)
-      + '&password=' + encodeURIComponent(this.state.storedPassword || '');
+      + '&password=' + encodeURIComponent(this.state.storedPassword || '')
+      + '&idToken=' + encodeURIComponent(this.state.googleIdToken || '');
     document.body.appendChild(script);
     setTimeout(() => { if (!done) { self.setState({ syncStatus: 'error' }); cleanup(); } }, 15000);
   }
 
-  loadFromSheets(passwordOverride) {
+  loadFromSheets(passwordOverride, tokenOverride) {
     if (!SHEETS_WEBAPP_URL || this.props.sheetsSync === false) return;
     const self = this;
     const pw = passwordOverride !== undefined ? passwordOverride : this.state.storedPassword;
+    const token = tokenOverride !== undefined ? tokenOverride : this.state.googleIdToken;
     this.setState({ syncStatus: 'syncing' });
     // JSONP — עוקף חסימות CORS של Apps Script
     const cbName = 'finhubCb' + Date.now();
@@ -804,7 +874,8 @@ class Component extends DCLogic {
     };
     window[cbName] = (res) => {
       if (res && res.status === 'unauthorized') {
-        self.setState({ authed: false, authError: !!pw, syncStatus: 'idle' });
+        self.setState({ authed: false, authError: !!(pw || token), syncStatus: 'idle' });
+        setTimeout(() => self._renderGoogleButton(), 50);
         cleanup();
         return;
       }
@@ -827,7 +898,8 @@ class Component extends DCLogic {
     };
     script.onerror = () => { if (!done) { self.setState({ syncStatus: 'error' }); cleanup(); } };
     script.src = SHEETS_WEBAPP_URL + (SHEETS_WEBAPP_URL.indexOf('?') === -1 ? '?' : '&') + 'callback=' + cbName
-      + '&password=' + encodeURIComponent(pw || '');
+      + '&password=' + encodeURIComponent(pw || '')
+      + '&idToken=' + encodeURIComponent(token || '');
     document.body.appendChild(script);
     setTimeout(() => { if (!done) { self.setState({ syncStatus: 'error' }); cleanup(); } }, 12000);
   }
@@ -1368,6 +1440,7 @@ class Component extends DCLogic {
       triggerImport: () => self.triggerImport(),
       importFile: (e) => self.importFile(e),
       fileInputRef: self.fileInputRef,
+      loginButtonRef: self.loginButtonRef,
     };
   }
 }
