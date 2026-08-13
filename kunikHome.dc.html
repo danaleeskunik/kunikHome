@@ -154,11 +154,11 @@
                 <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:10px;">
                   <div style="display:flex;align-items:flex-end;gap:7px;height:170px;width:100%;justify-content:center;">
                     <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
-                      <span style="font-size:11px;font-weight:700;color:#00764A;">{{ bar.incomeLabel }}</span>
+                      <span style="font-size:12.5px;font-weight:800;color:#00764A;">{{ bar.incomeLabel }}</span>
                       <div style="width:26px;border-radius:6px 6px 0 0;background:#00764A;height:{{ bar.incomeHeight }};"></div>
                     </div>
                     <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
-                      <span style="font-size:11px;font-weight:700;color:#6E4FA3;">{{ bar.expenseLabel }}</span>
+                      <span style="font-size:12.5px;font-weight:800;color:#6E4FA3;">{{ bar.expenseLabel }}</span>
                       <div style="width:26px;border-radius:6px 6px 0 0;background:#6E4FA3;height:{{ bar.expenseHeight }};"></div>
                     </div>
                   </div>
@@ -192,7 +192,7 @@
                   <span style="width:11px;height:11px;border-radius:3px;flex:none;background:{{ lg.color }};"></span>
                   <span style="flex:1;font-size:13.5px;font-weight:700;color:#121213;">{{ lg.label }}</span>
                   <span style="font-size:13px;font-weight:700;color:#6A6D70;">{{ lg.percentLabel }}</span>
-                  <span style="font-size:13.5px;font-weight:800;color:#121213;min-width:70px;text-align:left;">{{ lg.valueLabel }}</span>
+                  <span style="font-size:15.5px;font-weight:800;color:#121213;min-width:70px;text-align:left;">{{ lg.valueLabel }}</span>
                 </div>
               </sc-for>
             </div>
@@ -254,7 +254,7 @@
                   <span style="font-weight:800;font-size:15px;color:{{ activeDomain.color }};">{{ grp.label }}</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;">
-                  <span style="font-weight:800;font-size:15px;color:{{ activeDomain.color }};">סה"כ: {{ grp.totalLabel }}</span>
+                  <span style="font-weight:800;font-size:16px;color:{{ activeDomain.color }};">סה"כ: {{ grp.totalLabel }}</span>
                   <button onClick="{{ grp.exportCsv }}" type="button" aria-label="ייצוא קטגוריה לאקסל" style="width:28px;height:28px;border-radius:8px;border:none;background:rgba(255,255,255,.6);color:{{ activeDomain.color }};display:flex;align-items:center;justify-content:center;cursor:pointer;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 10.5L12 15l4.5-4.5M4 19h16"></path></svg>
                   </button>
@@ -281,7 +281,7 @@
                     <sc-for list="{{ grp.items }}" as="item" hint-placeholder-count="2">
                       <tr>
                         <sc-for list="{{ item.cells }}" as="cell" hint-placeholder-count="4">
-                          <td style="padding:13px 16px;font-size:13.5px;color:#121213;border-bottom:1px solid #F0F3F7;">{{ cell.value }}</td>
+                          <td style="{{ cell.cellStyle }}">{{ cell.value }}</td>
                         </sc-for>
                         <sc-if value="{{ activeDomain.hasStatusColumn }}" hint-placeholder-val="{{ false }}">
                           <td style="padding:13px 16px;border-bottom:1px solid #F0F3F7;">
@@ -359,10 +359,10 @@
                 <sc-for list="{{ activeDomain.items }}" as="item" hint-placeholder-count="3">
                   <tr>
                     <sc-for list="{{ item.cells }}" as="cell" hint-placeholder-count="4">
-                      <td style="padding:13px 16px;font-size:13.5px;color:#121213;border-bottom:1px solid #F0F3F7;">{{ cell.value }}</td>
+                      <td style="{{ cell.cellStyle }}">{{ cell.value }}</td>
                     </sc-for>
                     <sc-if value="{{ activeDomain.hasComputedColumn }}" hint-placeholder-val="{{ false }}">
-                      <td style="padding:13px 16px;font-size:13.5px;color:#121213;border-bottom:1px solid #F0F3F7;font-weight:700;">{{ item.computedValue }}</td>
+                      <td style="{{ activeDomain.currencyTdStyle }}">{{ item.computedValue }}</td>
                     </sc-if>
                     <sc-if value="{{ activeDomain.hasStatusColumn }}" hint-placeholder-val="{{ false }}">
                       <td style="padding:13px 16px;border-bottom:1px solid #F0F3F7;">
@@ -485,7 +485,7 @@ const DOMAINS = [
       { key:'company', label:'חברה מבטחת', type:'text' },
       { key:'policyNumber', label:'מספר פוליסה', type:'text' },
       { key:'phone', label:'טלפון', type:'tel' },
-      { key:'amount', label:'סכום לחיוב', type:'text' },
+      { key:'amount', label:'סכום לחיוב', type:'currency' },
       { key:'renewal', label:'תאריך חידוש/תפוגה', type:'date' },
       { key:'agent', label:'איש קשר בסוכנות', type:'text' },
       { key:'docs', label:'מסמכים מצורפים (תיאור/מיקום)', type:'text' },
@@ -499,7 +499,7 @@ const DOMAINS = [
       { key:'owner', label:'שייך ל', type:'multiselect' },
       { key:'category', label:'קטגוריה', type:'select' },
       { key:'institution', label:'גוף מנהל', type:'text' },
-      { key:'balance', label:'יתרה נוכחית', type:'text' },
+      { key:'balance', label:'יתרה נוכחית', type:'currency' },
       { key:'type', label:'סוג', type:'text' },
       { key:'notes', label:'הערות', type:'textarea' },
     ], groupBy:'category' },
@@ -525,9 +525,9 @@ const DOMAINS = [
       { key:'plate', label:'מספר רישוי', type:'text' },
       { key:'licenseExpiry', label:'תוקף רישיון רכב', type:'date' },
       { key:'insuranceCompany', label:'חברת ביטוח', type:'text' },
-      { key:'comprehensiveCost', label:'עלות ביטוח מקיף', type:'text' },
-      { key:'mandatoryCost', label:'עלות ביטוח חובה', type:'text' },
-      { key:'licenseCost', label:'עלות רישיון רכב', type:'text' },
+      { key:'comprehensiveCost', label:'עלות ביטוח מקיף', type:'currency' },
+      { key:'mandatoryCost', label:'עלות ביטוח חובה', type:'currency' },
+      { key:'licenseCost', label:'עלות רישיון רכב', type:'currency' },
       { key:'insuranceExpiry', label:'תוקף ביטוח', type:'date' },
       { key:'notes', label:'הערות', type:'textarea' },
     ], hasTotalSummary:true, totalAmountKeys:['comprehensiveCost','mandatoryCost','licenseCost'], totalAmountDivisor:12, totalLabelText:'סה"כ הוצאה חודשית',
@@ -537,7 +537,7 @@ const DOMAINS = [
     dateKey:'finalDueDate', waKey:'phone',
     fields:[
       { key:'name', label:'שם התשלום', type:'text', primary:true },
-      { key:'amount', label:'סכום', type:'text' },
+      { key:'amount', label:'סכום', type:'currency' },
       { key:'finalDueDate', label:'תאריך אחרון לתשלום', type:'date' },
       { key:'dueDate', label:'תאריך ששולם', type:'date' },
       { key:'phone', label:'טלפון ליצירת קשר (לתזכורת)', type:'tel' },
@@ -548,7 +548,7 @@ const DOMAINS = [
     dateKey:null, waKey:null,
     fields:[
       { key:'source', label:'מקור ההכנסה', type:'text', primary:true },
-      { key:'amount', label:'סכום', type:'text' },
+      { key:'amount', label:'סכום', type:'currency' },
       { key:'frequency', label:'תדירות', type:'text' },
       { key:'date', label:'תאריך אחרון שהתקבל', type:'date' },
       { key:'notes', label:'הערות', type:'textarea' },
@@ -568,6 +568,8 @@ const DEFAULT_SAVINGS_OWNERS = ['דנה', 'אלון'];
 const DEFAULT_HEALTH_OWNERS = ['דנה', 'אלון', 'איתי', 'בן'];
 const DEFAULT_INSURANCE_OWNERS = ['דנה', 'אלון', 'איתי', 'בן'];
 const HEBREW_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+const BASE_TD_STYLE = 'padding:13px 16px;font-size:13.5px;color:#121213;border-bottom:1px solid #F0F3F7;';
+const CURRENCY_TD_STYLE = 'padding:13px 16px;font-size:15.5px;font-weight:700;color:#121213;border-bottom:1px solid #F0F3F7;';
 const EMPTY_DATA = { insurance:[], income:[], savings:[], vehicles:[], health:[], payments:[] };
 const STATUS_COLORS = {
   urgent: { bg:'#FBEAEC', color:'#B23A48' },
@@ -1053,6 +1055,12 @@ class Component extends DCLogic {
     return isNaN(n) ? 0 : n;
   }
 
+  formatAmount(v) {
+    if (v === undefined || v === null || v === '') return '';
+    if (!/\d/.test(String(v))) return String(v);
+    return this.parseAmount(v).toLocaleString('he-IL', { maximumFractionDigits: 2 });
+  }
+
   monthLabel(iso) {
     const parts = iso.split('-');
     const m = parseInt(parts[1], 10) - 1;
@@ -1214,7 +1222,7 @@ class Component extends DCLogic {
       const sortArrow = (key) => (sortState && sortState.key === key) ? (sortState.dir === 'asc' ? ' ▲' : ' ▼') : '';
       const stopClick = (e) => e.stopPropagation();
       const columns = d.fields.map(f => {
-        const defaultWidth = f.type === 'textarea' ? 300 : 130;
+        const defaultWidth = f.type === 'textarea' ? 300 : f.type === 'currency' ? 150 : 130;
         const width = domainColWidths[f.key] || defaultWidth;
         return {
           key: f.key, label: f.label + sortArrow(f.key),
@@ -1225,7 +1233,12 @@ class Component extends DCLogic {
         };
       });
       const items = rawItems.map(item => {
-        const cells = d.fields.map(f => ({ value: f.type === 'date' ? (self.formatDate(item[f.key]) || '—') : (item[f.key] || '—') }));
+        const cells = d.fields.map(f => ({
+          value: f.type === 'date' ? (self.formatDate(item[f.key]) || '—')
+            : f.type === 'currency' ? (self.formatAmount(item[f.key]) || '—')
+            : (item[f.key] || '—'),
+          cellStyle: f.type === 'currency' ? CURRENCY_TD_STYLE : BASE_TD_STYLE,
+        }));
         const days = d.dateKey ? self.daysUntil(item[d.dateKey]) : null;
         const badge = days !== null ? self.badgeFor(days) : null;
         let wa = '';
@@ -1354,6 +1367,7 @@ class Component extends DCLogic {
         })),
         hasComputedColumn: !!d.computedMonthlyKeys,
         computedColumnLabel: (d.computedMonthlyLabel || '') + sortArrow('__computed__'),
+        currencyTdStyle: CURRENCY_TD_STYLE,
         onComputedSortClick: () => self.setSort(d.key, '__computed__'),
         hasGroupedTable: !!(d.hasMonthlySummary || d.groupBy),
         hasFlatTable: !d.hasMonthlySummary && !d.groupBy,
