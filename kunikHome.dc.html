@@ -245,11 +245,14 @@
 
       <sc-if value="{{ activeDomain.hasItems }}" hint-placeholder-val="{{ false }}">
         <sc-if value="{{ activeDomain.hasGroupedTable }}" hint-placeholder-val="{{ false }}">
-          <div class="dc-scroll" style="margin-top:26px;max-height:65vh;overflow:auto;border-radius:14px;box-shadow:0 2px 8px rgba(15,46,82,.06);">
+          <div class="dc-scroll" style="margin-top:26px;max-height:calc(100vh - 230px);overflow:auto;border-radius:14px;box-shadow:0 2px 8px rgba(15,46,82,.06);">
           <sc-for list="{{ activeDomain.groups }}" as="grp" hint-placeholder-count="2">
             <div>
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:{{ activeDomain.colorBg }};padding:12px 18px;position:sticky;top:0;z-index:3;">
-                <span style="font-weight:800;font-size:15px;color:{{ activeDomain.color }};">{{ grp.label }}</span>
+              <div onClick="{{ grp.onToggle }}" style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:{{ activeDomain.colorBg }};padding:12px 18px;position:sticky;top:0;z-index:3;cursor:pointer;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{{ activeDomain.color }}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="{{ grp.chevronStyle }}flex:none;"><path d="M9 6l6 6-6 6"></path></svg>
+                  <span style="font-weight:800;font-size:15px;color:{{ activeDomain.color }};">{{ grp.label }}</span>
+                </div>
                 <div style="display:flex;align-items:center;gap:10px;">
                   <span style="font-weight:800;font-size:15px;color:{{ activeDomain.color }};">סה"כ: {{ grp.totalLabel }}</span>
                   <button onClick="{{ grp.exportCsv }}" type="button" aria-label="ייצוא קטגוריה לאקסל" style="width:28px;height:28px;border-radius:8px;border:none;background:rgba(255,255,255,.6);color:{{ activeDomain.color }};display:flex;align-items:center;justify-content:center;cursor:pointer;">
@@ -257,6 +260,7 @@
                   </button>
                 </div>
               </div>
+              <sc-if value="{{ grp.expanded }}" hint-placeholder-val="{{ true }}">
               <div style="background:#fff;border:1px solid #E4EAF1;border-top:none;min-width:0;">
                 <table style="{{ activeDomain.tableStyle }}">
                   <thead>
@@ -320,6 +324,7 @@
                   </tbody>
                 </table>
               </div>
+              </sc-if>
             </div>
           </sc-for>
           </div>
@@ -331,7 +336,7 @@
           </div>
         </sc-if>
         <sc-if value="{{ activeDomain.hasFlatTable }}" hint-placeholder-val="{{ true }}">
-          <div class="dc-scroll" style="margin-top:26px;max-height:65vh;background:#fff;border:1px solid #E4EAF1;border-radius:16px;overflow:auto;min-width:0;box-shadow:0 2px 8px rgba(15,46,82,.06);">
+          <div class="dc-scroll" style="margin-top:26px;max-height:calc(100vh - 230px);background:#fff;border:1px solid #E4EAF1;border-radius:16px;overflow:auto;min-width:0;box-shadow:0 2px 8px rgba(15,46,82,.06);">
             <table style="{{ activeDomain.tableStyle }}">
               <thead>
                 <tr>
@@ -553,6 +558,7 @@ const HOME_ICON = 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10';
 const STORAGE_KEY = 'finhub_data_v1';
 const STORAGE_CATS_KEY = 'finhub_categories_v1';
 const STORAGE_COLWIDTHS_KEY = 'finhub_colwidths_v1';
+const STORAGE_COLLAPSED_KEY = 'finhub_collapsed_v1';
 const AUTH_KEY = 'finhub_auth_v1';
 const GOOGLE_AUTH_KEY = 'finhub_google_auth_v1';
 const GOOGLE_CLIENT_ID = '547196446091-mi9ngcdqdeucjk1qjo3ddnr8n5kluv3l.apps.googleusercontent.com';
@@ -640,6 +646,7 @@ class Component extends DCLogic {
     editingId: null,
     formValues: {},
     colWidths: {},
+    collapsedGroups: {},
     sortBy: {},
     authed: true,
     authError: false,
@@ -684,6 +691,13 @@ class Component extends DCLogic {
       if (rawWidths) {
         const parsedWidths = JSON.parse(rawWidths);
         if (parsedWidths && typeof parsedWidths === 'object') this.setState({ colWidths: parsedWidths });
+      }
+    } catch (e) {}
+    try {
+      const rawCollapsed = localStorage.getItem(STORAGE_COLLAPSED_KEY);
+      if (rawCollapsed) {
+        const parsedCollapsed = JSON.parse(rawCollapsed);
+        if (parsedCollapsed && typeof parsedCollapsed === 'object') this.setState({ collapsedGroups: parsedCollapsed });
       }
     } catch (e) {}
     this.loadFromSheets(storedPw, storedToken);
@@ -905,6 +919,17 @@ class Component extends DCLogic {
   }
 
   domainByKey(key) { return DOMAINS.find(d => d.key === key); }
+
+  toggleGroupCollapse(domainKey, groupKey, e) {
+    if (e) e.stopPropagation();
+    this.setState(s => {
+      const ck = domainKey + '|' + groupKey;
+      const next = Object.assign({}, s.collapsedGroups);
+      if (next[ck]) delete next[ck]; else next[ck] = true;
+      try { localStorage.setItem(STORAGE_COLLAPSED_KEY, JSON.stringify(next)); } catch (err) {}
+      return { collapsedGroups: next };
+    });
+  }
 
   setSort(domainKey, sortKey, e) {
     if (e) e.stopPropagation();
@@ -1278,10 +1303,14 @@ class Component extends DCLogic {
         });
         groups = Object.keys(groupsMap).sort((a, b) => b.localeCompare(a)).map(k => {
           const g = groupsMap[k];
+          const collapsed = !!(state.collapsedGroups && state.collapsedGroups[d.key + '|' + g.key]);
           return {
             key: g.key, label: g.label, items: g.items,
             totalLabel: g.total ? (g.total.toLocaleString('he-IL') + ' ₪') : '—',
-            exportCsv: () => self.exportGroupToCsv(d, g.label, g.rawItems),
+            exportCsv: (e) => { if (e) e.stopPropagation(); self.exportGroupToCsv(d, g.label, g.rawItems); },
+            collapsed: collapsed, expanded: !collapsed,
+            chevronStyle: 'transform:rotate(' + (collapsed ? '-90deg' : '0deg') + ');transition:transform .15s ease;',
+            onToggle: (e) => self.toggleGroupCollapse(d.key, g.key, e),
           };
         });
       } else if (d.groupBy) {
@@ -1301,10 +1330,14 @@ class Component extends DCLogic {
         }).map(k => {
           const g = groupsMap[k];
           const count = g.items.length;
+          const collapsed = !!(state.collapsedGroups && state.collapsedGroups[d.key + '|' + g.key]);
           return {
             key: g.key, label: g.label, items: g.items,
             totalLabel: count + (count === 1 ? ' רשומה' : ' רשומות'),
-            exportCsv: () => self.exportGroupToCsv(d, g.label, g.rawItems),
+            exportCsv: (e) => { if (e) e.stopPropagation(); self.exportGroupToCsv(d, g.label, g.rawItems); },
+            collapsed: collapsed, expanded: !collapsed,
+            chevronStyle: 'transform:rotate(' + (collapsed ? '-90deg' : '0deg') + ');transition:transform .15s ease;',
+            onToggle: (e) => self.toggleGroupCollapse(d.key, g.key, e),
           };
         });
       }
