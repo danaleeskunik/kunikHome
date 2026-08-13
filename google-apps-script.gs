@@ -18,28 +18,29 @@ function checkAuth(p) {
 
 function doGet(e) {
   var p = (e && e.parameter) ? e.parameter : {};
+  var viaPostMessage = p.mode === 'postmessage';
 
   if (!checkAuth(p)) {
-    return reply({ status: 'unauthorized' }, p.callback);
+    return reply({ status: 'unauthorized' }, p.callback, viaPostMessage);
   }
 
   if (p.action === 'save' && p.payload) {
     var result = saveAll(JSON.parse(p.payload));
-    return reply(result, p.callback);
+    return reply(result, p.callback, viaPostMessage);
   }
 
-  return reply(loadAll(), p.callback);
+  return reply(loadAll(), p.callback, viaPostMessage);
 }
 
 function doPost(e) {
   var p = (e && e.parameter) ? e.parameter : {};
   if (!checkAuth(p)) {
-    return reply({ status: 'unauthorized' }, null);
+    return reply({ status: 'unauthorized' }, null, p.mode === 'postmessage');
   }
   var raw = (e.parameter && e.parameter.payload)
     ? e.parameter.payload
     : (e.postData ? e.postData.contents : '{}');
-  return reply(saveAll(JSON.parse(raw)), null);
+  return reply(saveAll(JSON.parse(raw)), null, p.mode === 'postmessage');
 }
 
 function saveAll(body) {
@@ -115,7 +116,14 @@ function loadAll() {
   return { status: 'ok', data: data, categories: categories };
 }
 
-function reply(payload, callback) {
+function reply(payload, callback, viaPostMessage) {
+  if (viaPostMessage) {
+    // עמוד HTML זעיר שרץ בתוך iframe ומעביר את התשובה להורה דרך postMessage —
+    // עוקף מגבלה של WebKit/iOS שחוסמת הפניה (redirect) בין-דומיינים כשטוענים
+    // תג <script> ישירות (JSONP), אבל לא חוסמת ניווט iframe.
+    var html = '<script>parent.postMessage(' + JSON.stringify(JSON.stringify(payload)) + ', "*");<\/script>';
+    return ContentService.createTextOutput(html).setMimeType(ContentService.MimeType.HTML);
+  }
   if (callback) {
     return ContentService
       .createTextOutput(callback + '(' + JSON.stringify(payload) + ')')
