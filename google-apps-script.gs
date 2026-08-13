@@ -121,8 +121,10 @@ function reply(payload, callback, viaPostMessage) {
     // עמוד HTML זעיר שרץ בתוך iframe ומעביר את התשובה להורה דרך postMessage —
     // עוקף מגבלה של WebKit/iOS שחוסמת הפניה (redirect) בין-דומיינים כשטוענים
     // תג <script> ישירות (JSONP), אבל לא חוסמת ניווט iframe.
+    // (משתמשים ב-HtmlService ולא ב-ContentService — רק HtmlService מריץ בפועל
+    // <script> בתוך הדף; ContentService מיועד לתוכן גולמי בלבד ולא מריץ סקריפטים.)
     var html = '<script>parent.postMessage(' + JSON.stringify(JSON.stringify(payload)) + ', "*");<\/script>';
-    return ContentService.createTextOutput(html).setMimeType(ContentService.MimeType.HTML);
+    return HtmlService.createHtmlOutput(html);
   }
   if (callback) {
     return ContentService
