@@ -844,31 +844,24 @@ class Component extends DCLogic {
     const self = this;
     this.setState({ syncStatus: 'syncing' });
     const payload = JSON.stringify({ data: data, categories: this.state.categories });
-    // כתיבה דרך GET + JSONP — POST נחסם בדפדפן מול Apps Script
-    const cbName = 'finhubSave' + Date.now();
-    const script = document.createElement('script');
-    let done = false;
-    const cleanup = () => {
-      done = true;
-      try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
-      if (script.parentNode) script.parentNode.removeChild(script);
-    };
-    window[cbName] = (res) => {
-      if (res && res.status === 'unauthorized') {
-        self.setState({ authed: false, syncStatus: 'idle' });
-        setTimeout(() => self._renderGoogleButton(), 50);
-      } else {
-        self.setState({ syncStatus: (res && res.status === 'ok') ? 'synced' : 'error' });
-      }
-      cleanup();
-    };
-    script.onerror = () => { if (!done) { self.setState({ syncStatus: 'error' }); cleanup(); } };
-    script.src = SHEETS_WEBAPP_URL + '?action=save&callback=' + cbName
-      + '&payload=' + encodeURIComponent(payload)
-      + '&password=' + encodeURIComponent(this.state.storedPassword || '')
+    // fetch רגיל — Apps Script שולח Access-Control-Allow-Origin: *, אין יותר צורך ב-JSONP
+    const url = SHEETS_WEBAPP_URL
+      + '?password=' + encodeURIComponent(this.state.storedPassword || '')
       + '&idToken=' + encodeURIComponent(this.state.googleIdToken || '');
-    document.body.appendChild(script);
-    setTimeout(() => { if (!done) { self.setState({ syncStatus: 'error' }); cleanup(); } }, 15000);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    fetch(url, { method: 'POST', body: payload, signal: controller.signal })
+      .then(r => r.json())
+      .then(res => {
+        clearTimeout(timer);
+        if (res && res.status === 'unauthorized') {
+          self.setState({ authed: false, syncStatus: 'idle' });
+          setTimeout(() => self._renderGoogleButton(), 50);
+        } else {
+          self.setState({ syncStatus: (res && res.status === 'ok') ? 'synced' : 'error' });
+        }
+      })
+      .catch(() => { clearTimeout(timer); self.setState({ syncStatus: 'error' }); });
   }
 
   loadFromSheets(passwordOverride, tokenOverride) {
@@ -877,45 +870,38 @@ class Component extends DCLogic {
     const pw = passwordOverride !== undefined ? passwordOverride : this.state.storedPassword;
     const token = tokenOverride !== undefined ? tokenOverride : this.state.googleIdToken;
     this.setState({ syncStatus: 'syncing' });
-    // JSONP — עוקף חסימות CORS של Apps Script
-    const cbName = 'finhubCb' + Date.now();
-    const script = document.createElement('script');
-    let done = false;
-    const cleanup = () => {
-      done = true;
-      try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
-      if (script.parentNode) script.parentNode.removeChild(script);
-    };
-    window[cbName] = (res) => {
-      if (res && res.status === 'unauthorized') {
-        self.setState({ authed: false, authError: !!(pw || token), syncStatus: 'idle' });
-        setTimeout(() => self._renderGoogleButton(), 50);
-        cleanup();
-        return;
-      }
-      if (!res || !res.data) { self.setState({ syncStatus: 'stale', authed: true, authError: false }); cleanup(); return; }
-      const merged = Object.assign({}, EMPTY_DATA, res.data);
-      const norm = normalizeData(merged);
-      const next = { syncStatus: 'synced', authed: true, authError: false };
-      if (res.categories) {
-        next.categories = mergeCategories(res.categories);
-        try { localStorage.setItem(STORAGE_CATS_KEY, JSON.stringify(res.categories)); } catch (e) {}
-      }
-      self.setState(next);
-      if (norm.changed) {
-        self.persist(norm.data);
-      } else {
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(norm.data)); } catch (e) {}
-        self.setState({ data: norm.data });
-      }
-      cleanup();
-    };
-    script.onerror = () => { if (!done) { self.setState({ syncStatus: 'error' }); cleanup(); } };
-    script.src = SHEETS_WEBAPP_URL + (SHEETS_WEBAPP_URL.indexOf('?') === -1 ? '?' : '&') + 'callback=' + cbName
-      + '&password=' + encodeURIComponent(pw || '')
+    // fetch רגיל — Apps Script שולח Access-Control-Allow-Origin: *, אין יותר צורך ב-JSONP
+    const url = SHEETS_WEBAPP_URL + (SHEETS_WEBAPP_URL.indexOf('?') === -1 ? '?' : '&')
+      + 'password=' + encodeURIComponent(pw || '')
       + '&idToken=' + encodeURIComponent(token || '');
-    document.body.appendChild(script);
-    setTimeout(() => { if (!done) { self.setState({ syncStatus: 'error' }); cleanup(); } }, 12000);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
+    fetch(url, { signal: controller.signal })
+      .then(r => r.json())
+      .then(res => {
+        clearTimeout(timer);
+        if (res && res.status === 'unauthorized') {
+          self.setState({ authed: false, authError: !!(pw || token), syncStatus: 'idle' });
+          setTimeout(() => self._renderGoogleButton(), 50);
+          return;
+        }
+        if (!res || !res.data) { self.setState({ syncStatus: 'stale', authed: true, authError: false }); return; }
+        const merged = Object.assign({}, EMPTY_DATA, res.data);
+        const norm = normalizeData(merged);
+        const next = { syncStatus: 'synced', authed: true, authError: false };
+        if (res.categories) {
+          next.categories = mergeCategories(res.categories);
+          try { localStorage.setItem(STORAGE_CATS_KEY, JSON.stringify(res.categories)); } catch (e) {}
+        }
+        self.setState(next);
+        if (norm.changed) {
+          self.persist(norm.data);
+        } else {
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(norm.data)); } catch (e) {}
+          self.setState({ data: norm.data });
+        }
+      })
+      .catch(() => { clearTimeout(timer); self.setState({ syncStatus: 'error' }); });
   }
 
   domainByKey(key) { return DOMAINS.find(d => d.key === key); }
