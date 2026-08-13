@@ -6,39 +6,70 @@
 <title>בדיקת סנכרון</title>
 </head>
 <body style="font-family:system-ui,sans-serif;padding:24px;font-size:18px;background:#F4F7FB;">
-<h2>בדיקת חיבור לגיליון</h2>
-<div id="status" style="padding:16px;border-radius:10px;background:#E4EAF1;font-weight:700;">בודק...</div>
-<div id="detail" style="margin-top:14px;white-space:pre-wrap;font-family:monospace;font-size:13px;color:#444;"></div>
+<h2>בדיקה 1: JSONP (script tag) — השיטה הנוכחית</h2>
+<div id="status1" style="padding:16px;border-radius:10px;background:#E4EAF1;font-weight:700;">בודק...</div>
+<div id="detail1" style="margin-top:10px;white-space:pre-wrap;font-family:monospace;font-size:12px;color:#444;"></div>
+
+<h2 style="margin-top:32px;">בדיקה 2: fetch() — שיטה חלופית</h2>
+<div id="status2" style="padding:16px;border-radius:10px;background:#E4EAF1;font-weight:700;">בודק...</div>
+<div id="detail2" style="margin-top:10px;white-space:pre-wrap;font-family:monospace;font-size:12px;color:#444;"></div>
+
 <script>
-var statusEl = document.getElementById('status');
-var detailEl = document.getElementById('detail');
 var url = 'https://script.google.com/macros/s/AKfycby4vjW_P4KzHwKnuLIwFSO3B7n9oofY9A-5UAJbpPOLlAELvmEpSLfN9bKGuW7g2nv0-w/exec';
-var cbName = 'diagCb' + Date.now();
-var done = false;
 
-window[cbName] = function (res) {
-  done = true;
-  statusEl.style.background = '#C8F7C8';
-  statusEl.textContent = '✅ הצליח! קיבלתי תשובה מהשרת (JSONP עובד).';
-  detailEl.textContent = JSON.stringify(res, null, 2);
-};
+// בדיקה 1: JSONP
+(function () {
+  var statusEl = document.getElementById('status1');
+  var detailEl = document.getElementById('detail1');
+  var cbName = 'diagCb' + Date.now();
+  var done = false;
 
-var script = document.createElement('script');
-script.onerror = function () {
-  if (!done) {
-    statusEl.style.background = '#F7C8C8';
-    statusEl.textContent = '❌ שגיאה בטעינת הסקריפט (onerror) — החסימה קורית כאן.';
-  }
-};
-script.src = url + '?callback=' + cbName + '&password=diagnostic-test&_=' + Date.now();
-document.body.appendChild(script);
+  window[cbName] = function (res) {
+    done = true;
+    statusEl.style.background = '#C8F7C8';
+    statusEl.textContent = '✅ הצליח (JSONP עובד).';
+    detailEl.textContent = JSON.stringify(res, null, 2);
+  };
 
-setTimeout(function () {
-  if (!done) {
-    statusEl.style.background = '#F7C8C8';
-    statusEl.textContent = '⏱️ טיים-אאוט אחרי 10 שניות — אין תשובה בכלל (לא onerror ולא הצלחה). זו כנראה חסימה שקטה.';
-  }
-}, 10000);
+  var script = document.createElement('script');
+  script.onerror = function () {
+    if (!done) {
+      statusEl.style.background = '#F7C8C8';
+      statusEl.textContent = '❌ שגיאה בטעינת הסקריפט (onerror).';
+    }
+  };
+  script.src = url + '?callback=' + cbName + '&password=diagnostic-test&_=' + Date.now();
+  document.body.appendChild(script);
+
+  setTimeout(function () {
+    if (!done) {
+      statusEl.style.background = '#F7C8C8';
+      statusEl.textContent = '⏱️ טיים-אאוט — אין תשובה בכלל.';
+    }
+  }, 10000);
+})();
+
+// בדיקה 2: fetch
+(function () {
+  var statusEl = document.getElementById('status2');
+  var detailEl = document.getElementById('detail2');
+  var ctrl = new AbortController();
+  var timer = setTimeout(function () { ctrl.abort(); }, 10000);
+
+  fetch(url + '?password=diagnostic-test&_=' + Date.now(), { signal: ctrl.signal })
+    .then(function (r) { return r.text().then(function (t) { return { status: r.status, ok: r.ok, text: t }; }); })
+    .then(function (info) {
+      clearTimeout(timer);
+      statusEl.style.background = '#C8F7C8';
+      statusEl.textContent = '✅ fetch הצליח (HTTP ' + info.status + ').';
+      detailEl.textContent = info.text.slice(0, 500);
+    })
+    .catch(function (err) {
+      clearTimeout(timer);
+      statusEl.style.background = '#F7C8C8';
+      statusEl.textContent = '❌ fetch נכשל: ' + (err && err.message ? err.message : String(err));
+    });
+})();
 </script>
 </body>
 </html>
