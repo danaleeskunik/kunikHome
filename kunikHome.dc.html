@@ -279,19 +279,10 @@
                           <sc-if value="{{ item.hasDateBadge }}" hint-placeholder-val="{{ false }}">
                             <span style="font-size:11.5px;font-weight:600;color:{{ item.badgeColor }};">{{ item.badgeText }}</span>
                           </sc-if>
-                          <sc-if value="{{ item.needsChargeDate }}" hint-placeholder-val="{{ false }}">
-                            <span style="font-size:11.5px;color:#A8A293;">הוסיפי תאריך כדי לסמן כשולם</span>
-                          </sc-if>
                         </td>
                       </sc-if>
                       <td style="padding:9px 16px;border-bottom:1px solid #EFE9DC;white-space:nowrap;width:1%;position:sticky;left:0;background:{{ item.rowBgSolid }};box-shadow:1px 0 0 #E9E1D2;">
                         <div style="display:flex;gap:5px;justify-content:flex-end;align-items:center;">
-                          <sc-if value="{{ item.canPay }}" hint-placeholder-val="{{ false }}">
-                            <button onClick="{{ item.onPaid }}" title="סימון כשולם" style="height:29px;padding:0 11px;border-radius:8px;border:1px solid #CFDECF;background:#E8EFE7;color:#2F5D45;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4.5 4.5L19 7"></path></svg>
-                              שולם
-                            </button>
-                          </sc-if>
                           <sc-if value="{{ item.hasHistory }}" hint-placeholder-val="{{ false }}">
                             <button onClick="{{ item.onToggleHistory }}" title="חיובים קודמים" style="height:29px;padding:0 9px;border-radius:8px;border:1px solid #E4DCCB;background:{{ item.historyBtnBg }};color:#4E4A41;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;font-variant-numeric:tabular-nums;">
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v5l3.5 2M12 3.5A8.5 8.5 0 1 0 20.5 12"></path></svg>
@@ -1153,7 +1144,15 @@ class Component extends DCLogic {
     }
     const id = this.state.editingId || String(Date.now());
     const existing = (this.state.data[domain.key] || []).find(it => it.id === id);
-    const newItem = Object.assign({}, values, { id: id, history: (values.history || (existing && existing.history) || []) });
+    let history = (existing && existing.history) || [];
+    if (domain.payable && existing) {
+      const oldCharge = existing[domain.chargeKey];
+      const newCharge = values[domain.chargeKey];
+      if (oldCharge && newCharge && oldCharge !== newCharge) {
+        history = history.concat([{ date: oldCharge, amount: this.parseAmount(existing[domain.amountKey]) }]);
+      }
+    }
+    const newItem = Object.assign({}, values, { id: id, history: history });
     const list = this.state.data[domain.key] || [];
     const newList = this.state.editingId ? list.map(it => it.id === id ? newItem : it) : list.concat([newItem]);
     this.persist(Object.assign({}, this.state.data, { [domain.key]: newList }));
@@ -1170,26 +1169,6 @@ class Component extends DCLogic {
     const nextFiles = Object.assign({}, this.state.files);
     delete nextFiles[id];
     this.persistFiles(nextFiles);
-  }
-
-  markPaid(domain, item) {
-    const dateVal = item[domain.chargeKey];
-    if (!dateVal) { alert('אין תאריך חיוב לרשומה הזו. אפשר להוסיף אותו בעריכה.'); return; }
-    const amount = this.parseAmount(item[domain.amountKey]);
-    const months = this.recurMonths(item[domain.recurrenceKey]);
-    const history = (item.history || []).concat([{ date: dateVal, amount: amount }]);
-    const patch = { history: history };
-    if (months > 0) {
-      const todayIso = new Date().toISOString().slice(0, 10);
-      let next = this.addMonths(dateVal, months);
-      let guard = 0;
-      while (next < todayIso && guard < 240) { next = this.addMonths(next, months); guard++; }
-      patch[domain.chargeKey] = next;
-    } else {
-      patch[domain.chargeKey] = '';
-    }
-    const list = (this.state.data[domain.key] || []).map(it => it.id === item.id ? Object.assign({}, it, patch) : it);
-    this.persist(Object.assign({}, this.state.data, { [domain.key]: list }));
   }
 
   removeHistory(domain, item, index) {
@@ -1451,8 +1430,6 @@ class Component extends DCLogic {
           hasDateBadge: !!badge, badgeColor: badge ? badge.color : '', badgeText: badge ? badge.text : '',
           hasWa: !!wa, waLink: wa,
           hasFiles: fileCount > 0, fileCount: String(fileCount),
-          canPay: !!(d.payable && item[d.chargeKey]),
-          needsChargeDate: !!(d.payable && !item[d.chargeKey]),
           hasHistory: history.length > 0, historyCount: String(history.length),
           historyOpen: isOpen, historyBtnBg: isOpen ? '#EAF2FD' : '#FBF8F1',
           historyRows: historyRows, historyYears: years,
@@ -1460,7 +1437,6 @@ class Component extends DCLogic {
           rowBgSolid: isOpen ? '#FBF8F1' : '#FFFDF9',
           onEdit: () => self.openEditForm(d.key, item),
           onDelete: () => self.deleteItem(d.key, item.id),
-          onPaid: () => self.markPaid(d, item),
           onToggleHistory: () => self.toggleHistory(item.id),
         };
       };
