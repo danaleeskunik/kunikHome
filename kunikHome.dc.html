@@ -268,6 +268,9 @@
                       <sc-for list="{{ activeDomain.columns }}" as="col" hint-placeholder-count="4">
                         <th style="{{ col.thStyle }}" onClick="{{ col.onSortClick }}">{{ col.label }}<span class="dc-col-resize" onMouseDown="{{ col.onResizeStart }}" onTouchStart="{{ col.onResizeStart }}" onClick="{{ col.stopPropagation }}"></span></th>
                       </sc-for>
+                      <sc-if value="{{ activeDomain.hasComputedColumn }}" hint-placeholder-val="{{ false }}">
+                        <th style="text-align:right;padding:13px 16px;font-size:12.5px;font-weight:800;color:#6A6D70;background:#F7F9FC;border-bottom:1px solid #E4EAF1;white-space:normal;line-height:1.3;width:140px;cursor:pointer;" onClick="{{ activeDomain.onComputedSortClick }}">{{ activeDomain.computedColumnLabel }}</th>
+                      </sc-if>
                       <sc-if value="{{ activeDomain.hasStatusColumn }}" hint-placeholder-val="{{ false }}">
                         <th style="text-align:right;padding:13px 16px;font-size:12.5px;font-weight:800;color:#6A6D70;background:#F7F9FC;border-bottom:1px solid #E4EAF1;white-space:nowrap;width:110px;cursor:pointer;" onClick="{{ activeDomain.onStatusSortClick }}">סטטוס{{ activeDomain.statusSortArrow }}</th>
                       </sc-if>
@@ -283,6 +286,9 @@
                         <sc-for list="{{ item.cells }}" as="cell" hint-placeholder-count="4">
                           <td style="{{ cell.cellStyle }}">{{ cell.value }}</td>
                         </sc-for>
+                        <sc-if value="{{ activeDomain.hasComputedColumn }}" hint-placeholder-val="{{ false }}">
+                          <td style="{{ activeDomain.currencyTdStyle }}">{{ item.computedValue }}</td>
+                        </sc-if>
                         <sc-if value="{{ activeDomain.hasStatusColumn }}" hint-placeholder-val="{{ false }}">
                           <td style="padding:13px 16px;border-bottom:1px solid #F0F3F7;">
                             <sc-if value="{{ item.hasDateBadge }}" hint-placeholder-val="{{ false }}">
@@ -531,18 +537,23 @@ const DOMAINS = [
       { key:'insuranceExpiry', label:'תוקף ביטוח', type:'date' },
       { key:'notes', label:'הערות', type:'textarea' },
     ], hasTotalSummary:true, totalAmountKeys:['comprehensiveCost','mandatoryCost','licenseCost'], totalAmountDivisor:12, totalLabelText:'סה"כ הוצאה חודשית',
-    computedMonthlyKeys:['comprehensiveCost','mandatoryCost','licenseCost'], computedMonthlyLabel:'עלות חודשית ממוצעת' },
+    computedMonthlyKeys:['comprehensiveCost','mandatoryCost','licenseCost'], computedMonthlyLabel:'עלות חודשית ממוצעת', computedMonthlyDivisor:12 },
   { key:'payments', label:'תזכורות לתשלומים', color:'#6E4FA3', bg:'#F1ECFA',
     iconPath:'M12 3a5 5 0 0 0-5 5v3c0 1.2-.5 2.3-1.4 3.1L4 16h16l-1.6-1.9C17.5 13.3 17 12.2 17 11V8a5 5 0 0 0-5-5zM9.5 19a2.5 2.5 0 0 0 5 0',
     dateKey:'finalDueDate', waKey:'phone',
     fields:[
       { key:'name', label:'שם התשלום', type:'text', primary:true },
       { key:'amount', label:'סכום', type:'currency' },
+      { key:'frequency', label:'תדירות', type:'select' },
       { key:'finalDueDate', label:'תאריך אחרון לתשלום', type:'date' },
       { key:'dueDate', label:'תאריך ששולם', type:'date' },
       { key:'phone', label:'טלפון ליצירת קשר (לתזכורת)', type:'tel' },
       { key:'notes', label:'הערות', type:'textarea' },
-    ], hasMonthlySummary:true, summaryDateKey:'finalDueDate', summaryAmountKey:'amount' },
+    ], hasMonthlySummary:true, summaryDateKey:'finalDueDate', summaryAmountKey:'amount',
+    hasTotalSummary:true, totalAmountKey:'amount', totalLabelText:'סה"כ הוצאה חודשית ממוצעת',
+    totalAmountDivisor: (item) => item.frequency === PAYMENT_FREQUENCY_BIMONTHLY ? 2 : 1,
+    computedMonthlyKeys:['amount'], computedMonthlyLabel:'עלות חודשית ממוצעת',
+    computedMonthlyDivisor: (item) => item.frequency === PAYMENT_FREQUENCY_BIMONTHLY ? 2 : 1 },
   { key:'income', label:'הכנסות', color:'#00764A', bg:'#EAF7F1',
     iconPath:'M3 16l6-6 4 4 8-8M15 6h6v6',
     dateKey:null, waKey:null,
@@ -564,6 +575,8 @@ const AUTH_KEY = 'finhub_auth_v1';
 const GOOGLE_AUTH_KEY = 'finhub_google_auth_v1';
 const GOOGLE_CLIENT_ID = '547196446091-mi9ngcdqdeucjk1qjo3ddnr8n5kluv3l.apps.googleusercontent.com';
 const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycby4vjW_P4KzHwKnuLIwFSO3B7n9oofY9A-5UAJbpPOLlAELvmEpSLfN9bKGuW7g2nv0-w/exec';
+const PAYMENT_FREQUENCY_BIMONTHLY = 'דו חודשי';
+const DEFAULT_PAYMENT_FREQUENCIES = ['חודשי', PAYMENT_FREQUENCY_BIMONTHLY];
 const DEFAULT_SAVINGS_OWNERS = ['דנה', 'אלון'];
 const DEFAULT_HEALTH_OWNERS = ['דנה', 'אלון', 'איתי', 'בן'];
 const DEFAULT_INSURANCE_OWNERS = ['דנה', 'אלון', 'איתי', 'בן'];
@@ -581,6 +594,7 @@ function defaultCategories() {
     savings: { owner: DEFAULT_SAVINGS_OWNERS.slice(), category: [] },
     health: { owner: DEFAULT_HEALTH_OWNERS.slice(), category: [] },
     insurance: { owner: DEFAULT_INSURANCE_OWNERS.slice(), category: [] },
+    payments: { frequency: DEFAULT_PAYMENT_FREQUENCIES.slice() },
   };
 }
 function mergeCategories(parsed) {
@@ -1055,6 +1069,10 @@ class Component extends DCLogic {
     return isNaN(n) ? 0 : n;
   }
 
+  resolveDivisor(divisor, item) {
+    return typeof divisor === 'function' ? (divisor(item) || 1) : (divisor || 1);
+  }
+
   formatAmount(v) {
     if (v === undefined || v === null || v === '') return '';
     if (!/\d/.test(String(v))) return String(v);
@@ -1143,7 +1161,7 @@ class Component extends DCLogic {
       monthTotals[mKey][kind] += amount;
     };
     (state.data.income || []).forEach(it => addToMonth(it.date, self.parseAmount(it.amount), 'income'));
-    (state.data.payments || []).forEach(it => addToMonth(it.dueDate, self.parseAmount(it.amount), 'expense'));
+    (state.data.payments || []).forEach(it => addToMonth(it.dueDate, self.parseAmount(it.amount) / (it.frequency === PAYMENT_FREQUENCY_BIMONTHLY ? 2 : 1), 'expense'));
 
     const monthKeys = Object.keys(monthTotals).sort().slice(-6);
     const chartMax = monthKeys.reduce((m, k) => Math.max(m, monthTotals[k].income, monthTotals[k].expense), 0);
@@ -1165,8 +1183,7 @@ class Component extends DCLogic {
     const expenseRaw = DOMAINS.filter(d => d.hasTotalSummary).map(d => {
       const domainItems = state.data[d.key] || [];
       const amountKeys = d.totalAmountKeys || [d.totalAmountKey];
-      const divisor = d.totalAmountDivisor || 1;
-      const sum = domainItems.reduce((s, it) => s + amountKeys.reduce((s2, k) => s2 + self.parseAmount(it[k]), 0), 0) / divisor;
+      const sum = domainItems.reduce((s, it) => s + amountKeys.reduce((s2, k) => s2 + self.parseAmount(it[k]), 0) / self.resolveDivisor(d.totalAmountDivisor, it), 0);
       return { key: d.key, label: d.label, color: d.color, value: Math.round(sum * 100) / 100 };
     }).filter(x => x.value > 0);
     const expenseTotalMonthly = expenseRaw.reduce((s, x) => s + x.value, 0);
@@ -1207,8 +1224,8 @@ class Component extends DCLogic {
           if (sortState.key === '__status__') {
             cmp = self.compareSort(a[d.dateKey], b[d.dateKey], 'date');
           } else if (sortState.key === '__computed__') {
-            const av = (d.computedMonthlyKeys || []).reduce((s, k) => s + self.parseAmount(a[k]), 0);
-            const bv = (d.computedMonthlyKeys || []).reduce((s, k) => s + self.parseAmount(b[k]), 0);
+            const av = (d.computedMonthlyKeys || []).reduce((s, k) => s + self.parseAmount(a[k]), 0) / self.resolveDivisor(d.computedMonthlyDivisor, a);
+            const bv = (d.computedMonthlyKeys || []).reduce((s, k) => s + self.parseAmount(b[k]), 0) / self.resolveDivisor(d.computedMonthlyDivisor, b);
             cmp = av - bv;
           } else if (sf) {
             cmp = self.compareSort(a[sortState.key], b[sortState.key], sf.type);
@@ -1251,7 +1268,7 @@ class Component extends DCLogic {
         }
         let computedValue = '';
         if (d.computedMonthlyKeys) {
-          const sum = d.computedMonthlyKeys.reduce((s, k) => s + self.parseAmount(item[k]), 0) / 12;
+          const sum = d.computedMonthlyKeys.reduce((s, k) => s + self.parseAmount(item[k]), 0) / self.resolveDivisor(d.computedMonthlyDivisor, item);
           computedValue = sum ? (Math.round(sum * 100) / 100).toLocaleString('he-IL') + ' ₪' : '—';
         }
         const extraReminders = (d.extraReminders || []).map(r => {
@@ -1345,8 +1362,7 @@ class Component extends DCLogic {
       let totalSummaryLabel = null;
       if (d.hasTotalSummary) {
         const amountKeys = d.totalAmountKeys || [d.totalAmountKey];
-        const divisor = d.totalAmountDivisor || 1;
-        const sum = rawItems.reduce((s, it) => s + amountKeys.reduce((s2, k) => s2 + self.parseAmount(it[k]), 0), 0) / divisor;
+        const sum = rawItems.reduce((s, it) => s + amountKeys.reduce((s2, k) => s2 + self.parseAmount(it[k]), 0) / self.resolveDivisor(d.totalAmountDivisor, it), 0);
         totalSummaryLabel = sum ? ((Math.round(sum * 100) / 100).toLocaleString('he-IL') + ' ₪') : '—';
       }
 
