@@ -612,6 +612,38 @@ function normalizeData(data) {
   });
   return { data: next, changed: changed };
 }
+// Apps Script's Sheets round-trip stores every cell as a flat string, so the
+// `history` array (payable domains' mark-as-paid log) has to be packed into
+// a JSON string before syncing out, and unpacked back into a real array
+// after loading in — otherwise it round-trips as the literal string
+// "[object Object]" and any `.forEach`/`.map` on it throws.
+function packHistoryForSync(data) {
+  const next = {};
+  Object.keys(data).forEach(key => {
+    next[key] = (data[key] || []).map(item => {
+      if (!item || !Array.isArray(item.history)) return item;
+      return Object.assign({}, item, { history: JSON.stringify(item.history) });
+    });
+  });
+  return next;
+}
+function unpackHistoryFromSync(data) {
+  const next = {};
+  Object.keys(data).forEach(key => {
+    next[key] = (data[key] || []).map(item => {
+      if (!item) return item;
+      if (Array.isArray(item.history)) return item;
+      if (!item.history) return Object.assign({}, item, { history: [] });
+      try {
+        const parsed = JSON.parse(item.history);
+        return Object.assign({}, item, { history: Array.isArray(parsed) ? parsed : [] });
+      } catch (e) {
+        return Object.assign({}, item, { history: [] });
+      }
+    });
+  });
+  return next;
+}
 function decodeJwtPayload(token) {
   try {
     const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
@@ -681,7 +713,7 @@ class Component extends DCLogic {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        const merged = Object.assign({}, EMPTY_DATA, parsed);
+        const merged = unpackHistoryFromSync(Object.assign({}, EMPTY_DATA, parsed));
         const norm = normalizeData(merged);
         this.setState({ data: norm.data });
         if (norm.changed) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(norm.data)); } catch (e) {} }
@@ -825,7 +857,7 @@ class Component extends DCLogic {
     if (!SHEETS_WEBAPP_URL || this.props.sheetsSync === false) return;
     const self = this;
     this.setState({ syncStatus: 'syncing' });
-    const payload = JSON.stringify({ data: data, categories: this.state.categories });
+    const payload = JSON.stringify({ data: packHistoryForSync(data), categories: this.state.categories });
     const url = SHEETS_WEBAPP_URL
       + '?password=' + encodeURIComponent(this.state.storedPassword || '')
       + '&idToken=' + encodeURIComponent(this.state.googleIdToken || '');
@@ -866,7 +898,7 @@ class Component extends DCLogic {
           return;
         }
         if (!res || !res.data) { self.setState({ syncStatus: 'stale', authed: true, authError: false }); return; }
-        const merged = Object.assign({}, EMPTY_DATA, res.data);
+        const merged = unpackHistoryFromSync(Object.assign({}, EMPTY_DATA, res.data));
         const norm = normalizeData(merged);
         const next = { syncStatus: 'synced', authed: true, authError: false };
         if (res.categories) {
