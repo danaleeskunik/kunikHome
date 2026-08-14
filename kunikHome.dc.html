@@ -1147,8 +1147,15 @@ class Component extends DCLogic {
     const months = this.recurMonths(item[domain.recurrenceKey]);
     const history = (item.history || []).concat([{ date: dateVal, amount: amount }]);
     const patch = { history: history };
-    if (months > 0) patch[domain.chargeKey] = this.addMonths(dateVal, months);
-    else patch[domain.chargeKey] = '';
+    if (months > 0) {
+      const todayIso = new Date().toISOString().slice(0, 10);
+      let next = this.addMonths(dateVal, months);
+      let guard = 0;
+      while (next < todayIso && guard < 240) { next = this.addMonths(next, months); guard++; }
+      patch[domain.chargeKey] = next;
+    } else {
+      patch[domain.chargeKey] = '';
+    }
     const list = (this.state.data[domain.key] || []).map(it => it.id === item.id ? Object.assign({}, it, patch) : it);
     this.persist(Object.assign({}, this.state.data, { [domain.key]: list }));
   }
