@@ -395,6 +395,13 @@
             <sc-if value="{{ f.isInput }}" hint-placeholder-val="{{ true }}">
               <input type="{{ f.type }}" value="{{ f.value }}" onChange="{{ f.onChange }}" style="padding:10px 12px;border-radius:10px;border:1px solid #E4DCCB;font-size:13.5px;background:#FBF8F1;color:#22261F;outline:none;" />
             </sc-if>
+            <sc-if value="{{ f.isDate }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:6px;direction:ltr;">
+                <input type="number" min="1" max="31" placeholder="dd" value="{{ f.dateDay }}" onChange="{{ f.onDayChange }}" style="width:60px;padding:10px 8px;border-radius:10px;border:1px solid #E4DCCB;font-size:13.5px;background:#FBF8F1;color:#22261F;outline:none;text-align:center;" />
+                <input type="number" min="1" max="12" placeholder="mm" value="{{ f.dateMonth }}" onChange="{{ f.onMonthChange }}" style="width:60px;padding:10px 8px;border-radius:10px;border:1px solid #E4DCCB;font-size:13.5px;background:#FBF8F1;color:#22261F;outline:none;text-align:center;" />
+                <input type="number" min="1900" max="2100" placeholder="yyyy" value="{{ f.dateYear }}" onChange="{{ f.onYearChange }}" style="width:80px;padding:10px 8px;border-radius:10px;border:1px solid #E4DCCB;font-size:13.5px;background:#FBF8F1;color:#22261F;outline:none;text-align:center;" />
+              </div>
+            </sc-if>
             <sc-if value="{{ f.isSelect }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;gap:7px;">
                 <select value="{{ f.value }}" onChange="{{ f.onChange }}" style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid #E4DCCB;font-size:13.5px;background:#FBF8F1;color:#22261F;">
@@ -616,6 +623,7 @@ class Component extends DCLogic {
     editingId: null,
     formValues: {},
     formFiles: [],
+    datePartDrafts: {},
     colWidths: {},
     collapsedGroups: {},
     sortBy: {},
@@ -969,7 +977,7 @@ class Component extends DCLogic {
     const d = this.domainByKey(sectionKey);
     const initial = {};
     if (d && d.recurrenceKey) initial[d.recurrenceKey] = 'חודשי';
-    this.setState({ formOpen: true, editingSection: sectionKey, editingId: null, formValues: initial, formFiles: [] });
+    this.setState({ formOpen: true, editingSection: sectionKey, editingId: null, formValues: initial, formFiles: [], datePartDrafts: {} });
   }
 
   openEditForm(sectionKey, item) {
@@ -980,12 +988,37 @@ class Component extends DCLogic {
       formOpen: true, editingSection: sectionKey, editingId: item.id,
       formValues: values,
       formFiles: (this.state.files[item.id] || []).slice(),
+      datePartDrafts: {},
     });
   }
 
-  closeForm() { this.setState({ formOpen: false, editingSection: null, editingId: null, formValues: {}, formFiles: [] }); }
+  closeForm() { this.setState({ formOpen: false, editingSection: null, editingId: null, formValues: {}, formFiles: [], datePartDrafts: {} }); }
 
   updateField(key, value) { this.setState(s => ({ formValues: Object.assign({}, s.formValues, { [key]: value }) })); }
+
+  splitDateParts(iso) {
+    const p = String(iso || '').split('-');
+    if (p.length !== 3) return { day: '', month: '', year: '' };
+    return { year: p[0], month: String(parseInt(p[1], 10) || ''), day: String(parseInt(p[2], 10) || '') };
+  }
+
+  currentDateParts(key) {
+    const draft = this.state.datePartDrafts && this.state.datePartDrafts[key];
+    return draft || this.splitDateParts(this.state.formValues[key]);
+  }
+
+  updateDatePart(key, part, rawValue) {
+    const current = this.currentDateParts(key);
+    const next = Object.assign({}, current, { [part]: rawValue.replace(/[^\d]/g, '') });
+    const day = parseInt(next.day, 10), month = parseInt(next.month, 10), year = parseInt(next.year, 10);
+    const complete = next.day && next.month && next.year && next.year.length === 4 && day >= 1 && day <= 31 && month >= 1 && month <= 12;
+    this.setState(s => ({
+      datePartDrafts: Object.assign({}, s.datePartDrafts, { [key]: complete ? null : next }),
+      formValues: Object.assign({}, s.formValues, {
+        [key]: complete ? (next.year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0')) : '',
+      }),
+    }));
+  }
 
   toggleMultiValue(key, opt) {
     const current = String(this.state.formValues[key] || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -1457,7 +1490,9 @@ class Component extends DCLogic {
         const isRecurrence = f.type === 'recurrence';
         const isContact = f.type === 'contact';
         const isMultiSelect = f.type === 'multiselect';
+        const isDate = f.type === 'date';
         const isSelect = f.type === 'select' || isRecurrence || isContact;
+        const dateParts = self.currentDateParts(f.key);
         let options = [];
         if (f.type === 'select') options = (state.categories[d.key] || []).slice();
         if (isRecurrence) options = RECURRENCES.map(r => r.label);
@@ -1476,8 +1511,13 @@ class Component extends DCLogic {
           isTextarea: f.type === 'textarea',
           isSelect: isSelect,
           isMultiSelect: isMultiSelect,
-          isInput: f.type !== 'textarea' && !isSelect && !isMultiSelect,
+          isDate: isDate,
+          isInput: f.type !== 'textarea' && !isSelect && !isMultiSelect && !isDate,
           value: state.formValues[f.key] || '',
+          dateDay: dateParts.day, dateMonth: dateParts.month, dateYear: dateParts.year,
+          onDayChange: (e) => self.updateDatePart(f.key, 'day', e.target.value),
+          onMonthChange: (e) => self.updateDatePart(f.key, 'month', e.target.value),
+          onYearChange: (e) => self.updateDatePart(f.key, 'year', e.target.value),
           options: options,
           optionItems: isMultiSelect ? ownerOptions.map(opt => {
             const checked = selectedList.indexOf(opt) !== -1;
