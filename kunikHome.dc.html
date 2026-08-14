@@ -584,6 +584,34 @@ const GOOGLE_AUTH_KEY = 'finhub_google_auth_v1';
 const GOOGLE_CLIENT_ID = '547196446091-mi9ngcdqdeucjk1qjo3ddnr8n5kluv3l.apps.googleusercontent.com';
 const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycby4vjW_P4KzHwKnuLIwFSO3B7n9oofY9A-5UAJbpPOLlAELvmEpSLfN9bKGuW7g2nv0-w/exec';
 
+function normalizeDateValue(v) {
+  if (!v || /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return v;
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return yyyy + '-' + mm + '-' + dd;
+}
+function normalizeData(data) {
+  let changed = false;
+  const next = {};
+  DOMAINS.forEach(d => {
+    const dateKeys = d.fields.filter(f => f.type === 'date').map(f => f.key);
+    next[d.key] = (data[d.key] || []).map(item => {
+      if (!dateKeys.length) return item;
+      let itemChanged = false;
+      const newItem = Object.assign({}, item);
+      dateKeys.forEach(k => {
+        const fixed = normalizeDateValue(item[k]);
+        if (fixed !== item[k]) { newItem[k] = fixed; itemChanged = true; }
+      });
+      if (itemChanged) changed = true;
+      return itemChanged ? newItem : item;
+    });
+  });
+  return { data: next, changed: changed };
+}
 function decodeJwtPayload(token) {
   try {
     const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
@@ -651,7 +679,13 @@ class Component extends DCLogic {
     });
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) this.setState({ data: Object.assign({}, EMPTY_DATA, JSON.parse(raw)) });
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const merged = Object.assign({}, EMPTY_DATA, parsed);
+        const norm = normalizeData(merged);
+        this.setState({ data: norm.data });
+        if (norm.changed) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(norm.data)); } catch (e) {} }
+      }
     } catch (e) {}
     try {
       const rawCats = localStorage.getItem(STORAGE_CATS_KEY);
@@ -833,13 +867,19 @@ class Component extends DCLogic {
         }
         if (!res || !res.data) { self.setState({ syncStatus: 'stale', authed: true, authError: false }); return; }
         const merged = Object.assign({}, EMPTY_DATA, res.data);
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(merged)); } catch (e) {}
-        const next = { data: merged, syncStatus: 'synced', authed: true, authError: false };
+        const norm = normalizeData(merged);
+        const next = { syncStatus: 'synced', authed: true, authError: false };
         if (res.categories) {
           next.categories = mergeCategories(res.categories);
           try { localStorage.setItem(STORAGE_CATS_KEY, JSON.stringify(res.categories)); } catch (e) {}
         }
         self.setState(next);
+        if (norm.changed) {
+          self.persist(norm.data);
+        } else {
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(norm.data)); } catch (e) {}
+          self.setState({ data: norm.data });
+        }
       })
       .catch(() => { clearTimeout(timer); self.setState({ syncStatus: 'error' }); });
   }
