@@ -157,65 +157,21 @@
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1.12fr .88fr;gap:18px;margin-top:18px;align-items:start;">
-          <div style="background:#FFFDF9;border:1px solid #E4DCCB;border-radius:16px;padding:22px 24px 18px;min-width:0;">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
-              <h3 style="margin:0;font-size:14.5px;font-weight:600;">הכנסות מול תשלומים</h3>
-              <div style="display:flex;gap:13px;">
-                <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6E6A5E;"><span style="width:9px;height:9px;border-radius:2px;background:#2F5D45;"></span>הכנסות</span>
-                <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6E6A5E;"><span style="width:9px;height:9px;border-radius:2px;background:#1B6FD1;"></span>תשלומים</span>
+        <div style="margin-top:18px;background:#FFFDF9;border:1px solid #E4DCCB;border-radius:16px;overflow:hidden;">
+          <h3 style="margin:0;padding:19px 21px 15px;font-size:14.5px;font-weight:600;">דורש טיפול</h3>
+          <sc-for list="{{ upcoming }}" as="u" hint-placeholder-count="4">
+            <button onClick="{{ u.onClick }}" style="display:flex;align-items:center;gap:11px;padding:13px 21px;width:100%;border:none;border-top:1px solid #EFE9DC;background:transparent;cursor:pointer;text-align:right;" style-hover="background:#FBF8F1">
+              <span style="width:3px;height:32px;border-radius:2px;flex:none;background:{{ u.badgeColor }};"></span>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ u.name }}</div>
+                <div style="font-size:11.5px;color:#8A8577;">{{ u.subtitle }}</div>
               </div>
-            </div>
-            <p style="margin:0 0 18px;font-size:12px;color:#8A8577;">{{ yearCompareLabel }}</p>
-            <sc-if value="{{ hasChart }}" hint-placeholder-val="{{ true }}">
-              <div style="display:flex;align-items:flex-end;gap:16px;height:178px;">
-                <sc-for list="{{ chartBars }}" as="bar" hint-placeholder-count="6">
-                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:9px;min-width:0;">
-                    <div style="display:flex;align-items:flex-end;gap:5px;height:142px;">
-                      <div title="{{ bar.incomeTitle }}" style="width:17px;border-radius:4px 4px 0 0;background:#2F5D45;height:{{ bar.incomeHeight }};"></div>
-                      <div title="{{ bar.expenseTitle }}" style="width:17px;border-radius:4px 4px 0 0;background:#1B6FD1;height:{{ bar.expenseHeight }};"></div>
-                    </div>
-                    <span style="font-size:11.5px;color:{{ bar.labelColor }};font-weight:{{ bar.labelWeight }};white-space:nowrap;">{{ bar.label }}</span>
-                  </div>
-                </sc-for>
-              </div>
-            </sc-if>
-            <sc-if value="{{ noChart }}" hint-placeholder-val="{{ false }}">
-              <p style="margin:0;padding:52px 0;text-align:center;color:#A8A293;font-size:13px;">הוסיפו הכנסות ותשלומים עם תאריכים כדי לראות מגמה.</p>
-            </sc-if>
-          </div>
-
-          <div style="background:#FFFDF9;border:1px solid #E4DCCB;border-radius:16px;overflow:hidden;">
-            <h3 style="margin:0;padding:19px 21px 15px;font-size:14.5px;font-weight:600;">דורש טיפול</h3>
-            <sc-for list="{{ upcoming }}" as="u" hint-placeholder-count="4">
-              <button onClick="{{ u.onClick }}" style="display:flex;align-items:center;gap:11px;padding:13px 21px;width:100%;border:none;border-top:1px solid #EFE9DC;background:transparent;cursor:pointer;text-align:right;" style-hover="background:#FBF8F1">
-                <span style="width:3px;height:32px;border-radius:2px;flex:none;background:{{ u.badgeColor }};"></span>
-                <div style="flex:1;min-width:0;">
-                  <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ u.name }}</div>
-                  <div style="font-size:11.5px;color:#8A8577;">{{ u.subtitle }}</div>
-                </div>
-                <span style="font-size:11.5px;font-weight:600;color:{{ u.badgeColor }};white-space:nowrap;">{{ u.badgeText }}</span>
-              </button>
-            </sc-for>
-            <sc-if value="{{ noUpcoming }}" hint-placeholder-val="{{ false }}">
-              <p style="margin:0;padding:34px 20px;text-align:center;color:#A8A293;font-size:13px;border-top:1px solid #EFE9DC;">אין תאריכים קרובים. הכל תחת שליטה.</p>
-            </sc-if>
-          </div>
-        </div>
-
-        <p style="margin:30px 0 12px;font-size:12px;font-weight:600;color:#8A8577;letter-spacing:.6px;">התחומים</p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(186px,1fr));gap:13px;">
-          <sc-for list="{{ homeCards }}" as="c" hint-placeholder-count="8">
-            <button onClick="{{ c.onClick }}" style="background:#FFFDF9;border:1px solid #E4DCCB;border-radius:14px;padding:17px 18px;cursor:pointer;display:flex;align-items:center;gap:13px;text-align:right;" style-hover="border-color:#CFC3AC">
-              <span style="width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex:none;background:{{ c.bg }};color:{{ c.color }};">
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ c.iconPath }}"></path></svg>
-              </span>
-              <span style="min-width:0;">
-                <span style="display:block;font-size:13.5px;font-weight:600;">{{ c.label }}</span>
-                <span style="display:block;font-size:12px;color:#8A8577;margin-top:2px;">{{ c.countLabel }}</span>
-              </span>
+              <span style="font-size:11.5px;font-weight:600;color:{{ u.badgeColor }};white-space:nowrap;">{{ u.badgeText }}</span>
             </button>
           </sc-for>
+          <sc-if value="{{ noUpcoming }}" hint-placeholder-val="{{ false }}">
+            <p style="margin:0;padding:34px 20px;text-align:center;color:#A8A293;font-size:13px;border-top:1px solid #EFE9DC;">אין תאריכים קרובים. הכל תחת שליטה.</p>
+          </sc-if>
         </div>
       </div>
     </sc-if>
@@ -328,6 +284,9 @@
                             <div style="display:flex;flex-wrap:wrap;gap:8px;">
                               <sc-for list="{{ item.historyRows }}" as="h" hint-placeholder-count="4">
                                 <span style="display:inline-flex;align-items:center;gap:9px;padding:7px 12px;border-radius:100px;background:#FFFDF9;border:1px solid #E4DCCB;font-size:12.5px;font-variant-numeric:tabular-nums;">
+                                  <sc-if value="{{ h.hasPeriod }}" hint-placeholder-val="{{ false }}">
+                                    <span style="color:#22261F;font-weight:600;">{{ h.periodLabel }}</span>
+                                  </sc-if>
                                   <span style="color:#6E6A5E;">{{ h.dateLabel }}</span>
                                   <span style="font-weight:600;">{{ h.amountLabel }}</span>
                                   <button onClick="{{ h.onRemove }}" title="הסרה" style="border:none;background:transparent;color:#A8A293;cursor:pointer;padding:0;line-height:1;font-size:15px;">×</button>
@@ -529,13 +488,14 @@ const DOMAINS = [
   { key:'payments', label:'תזכורות לתשלומים', kicker:'מה לשלם ומה שולם', color:'#5E4A86', bg:'#EDE9F5',
     iconPath:'M12 3a5 5 0 0 0-5 5v3c0 1.2-.5 2.3-1.4 3.1L4 16h16l-1.6-1.9C17.5 13.3 17 12.2 17 11V8a5 5 0 0 0-5-5zM9.5 19a2.5 2.5 0 0 0 5 0',
     dateKey:'dueDate', waKey:'phone',
-    payable:true, chargeKey:'dueDate', amountKey:'amount', recurrenceKey:'recurrence', paidKey:'paidDate',
+    payable:true, chargeKey:'dueDate', amountKey:'amount', recurrenceKey:'recurrence', paidKey:'paidDate', periodKey:'period',
     dateFields:[{key:'dueDate',label:'לתשלום'}],
     hasMonthlySummary:true, summaryDateKey:'dueDate', summaryAmountKey:'amount',
     fields:[
       { key:'name', label:'שם התשלום', type:'text', primary:true },
       { key:'amount', label:'סכום', type:'currency' },
       { key:'recurrence', label:'תדירות', type:'recurrence' },
+      { key:'period', label:'עבור איזו תקופה', type:'text' },
       { key:'dueDate', label:'תאריך לתשלום', type:'date' },
       { key:'paidDate', label:'שולם בתאריך', type:'date' },
       { key:'phone', label:'טלפון ליצירת קשר', type:'tel' },
@@ -656,7 +616,6 @@ function mergeCategories(parsed) {
   return Object.assign(defaultCategories(), parsed || {});
 }
 const HEBREW_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
-const MONTHS_SHORT = ['ינו','פבר','מרץ','אפר','מאי','יונ','יול','אוג','ספט','אוק','נוב','דצמ'];
 const EMPTY_DATA = { insurance:[], income:[], savings:[], vehicles:[], health:[], payments:[], contacts:[] };
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
 
@@ -1151,7 +1110,7 @@ class Component extends DCLogic {
       const oldCharge = existing[domain.chargeKey];
       const newCharge = values[domain.chargeKey];
       if (oldCharge && newCharge && oldCharge !== newCharge) {
-        history = history.concat([{ date: oldCharge, amount: this.parseAmount(existing[domain.amountKey]) }]);
+        history = history.concat([{ date: oldCharge, amount: this.parseAmount(existing[domain.amountKey]), period: domain.periodKey ? (existing[domain.periodKey] || '') : '' }]);
         extra.history = history;
         // New billing cycle started — the old "paid on" date no longer applies,
         // unless the user also typed a fresh one in this same edit.
@@ -1228,15 +1187,6 @@ class Component extends DCLogic {
       };
     }));
 
-    const homeCards = DOMAINS.map(d => {
-      const count = (state.data[d.key] || []).length;
-      return {
-        key:d.key, label:d.label, color:d.color, bg:d.bg, iconPath:d.iconPath,
-        countLabel: count === 0 ? 'ריק' : (count + (count === 1 ? ' רשומה' : ' רשומות')),
-        onClick: () => self.setActiveSection(d.key),
-      };
-    });
-
     // KPI: insurance monthly
     const insuranceDomain = self.domainByKey('insurance');
     const insuranceItems = state.data.insurance || [];
@@ -1267,7 +1217,7 @@ class Component extends DCLogic {
           if (!dateVal) return;
           if (d.paidKey && df.key === d.chargeKey && item[d.paidKey] && item[d.paidKey] <= dateVal) return;
           const days = self.daysUntil(dateVal);
-          if (days === null || days > 120 || days < -90) return;
+          if (days === null || days > 31 || days < -90) return;
           const badge = self.badgeFor(days);
           attention.push({
             key: item.id + df.key, sortVal: dateVal,
@@ -1282,54 +1232,6 @@ class Component extends DCLogic {
     attention.sort((a, b) => a.sortVal < b.sortVal ? -1 : (a.sortVal > b.sortVal ? 1 : 0));
     const upcoming = attention.slice(0, this.props.upcomingCount ?? 6);
     const urgentCount = attention.filter(a => a.badgeColor === '#A8492F').length;
-
-    // chart + year totals
-    const monthTotals = {};
-    const yearTotals = {};
-    const addMonth = (iso, amount, kind) => {
-      if (!iso || !amount) return;
-      const mKey = String(iso).slice(0, 7);
-      if (mKey.length !== 7) return;
-      if (!monthTotals[mKey]) monthTotals[mKey] = { income: 0, expense: 0 };
-      monthTotals[mKey][kind] += amount;
-      const y = mKey.slice(0, 4);
-      if (!yearTotals[y]) yearTotals[y] = { income: 0, expense: 0 };
-      yearTotals[y][kind] += amount;
-    };
-    (state.data.income || []).forEach(it => addMonth(it.date, self.parseAmount(it.amount), 'income'));
-    payables.forEach(d => {
-      (state.data[d.key] || []).forEach(it => {
-        (it.history || []).forEach(h => addMonth(h.date, h.amount || 0, 'expense'));
-        addMonth(it[d.chargeKey], self.parseAmount(it[d.amountKey]), 'expense');
-      });
-    });
-    const monthKeys = Object.keys(monthTotals).sort().slice(-6);
-    const chartMax = monthKeys.reduce((m, k) => Math.max(m, monthTotals[k].income, monthTotals[k].expense), 0);
-    const chartBars = monthKeys.map(k => {
-      const t = monthTotals[k];
-      const p = k.split('-');
-      const isNow = k === thisMonthKey;
-      return {
-        key: k,
-        label: (MONTHS_SHORT[parseInt(p[1], 10) - 1] || '') + ' ' + p[0].slice(2),
-        labelColor: isNow ? '#22261F' : '#8A8577',
-        labelWeight: isNow ? '600' : '400',
-        incomeHeight: chartMax ? Math.max(3, Math.round((t.income / chartMax) * 140)) + 'px' : '3px',
-        expenseHeight: chartMax ? Math.max(3, Math.round((t.expense / chartMax) * 140)) + 'px' : '3px',
-        incomeTitle: 'הכנסות: ' + self.money(t.income),
-        expenseTitle: 'תשלומים: ' + self.money(t.expense),
-      };
-    });
-    const curY = yearTotals[String(thisYear)];
-    const prevY = yearTotals[String(thisYear - 1)];
-    let yearCompareLabel = 'צריך תאריכים על ההכנסות והתשלומים כדי להשוות שנים.';
-    if (curY && prevY) {
-      const diff = curY.expense - prevY.expense;
-      const pct = prevY.expense ? Math.round((diff / prevY.expense) * 100) : 0;
-      yearCompareLabel = 'תשלומים ' + thisYear + ': ' + self.money(curY.expense) + ' · ' + (thisYear - 1) + ': ' + self.money(prevY.expense) + ' (' + (diff >= 0 ? '+' : '') + pct + '%)';
-    } else if (curY) {
-      yearCompareLabel = 'תשלומים ' + thisYear + ': ' + self.money(curY.expense) + ' · הכנסות: ' + self.money(curY.income);
-    }
 
     // global search
     const gq = (state.globalQuery || '').trim().toLowerCase();
@@ -1430,6 +1332,8 @@ class Component extends DCLogic {
             key: String(h.date) + idx,
             dateLabel: self.formatDate(h.date),
             amountLabel: self.money(h.amount || 0),
+            hasPeriod: !!h.period,
+            periodLabel: h.period || '',
             onRemove: () => self.removeHistory(d, item, idx),
           };
         });
@@ -1632,7 +1536,6 @@ class Component extends DCLogic {
       reloadFromSheets: () => self.loadFromSheets(),
       navItems: navItems,
       isHome: isHome, isDomain: !isHome && !isSearch, isSearch: isSearch,
-      homeCards: homeCards,
       kpiInsurance: insuranceMonthly ? Math.round(insuranceMonthly).toLocaleString('he-IL') : '0',
       kpiInsuranceSub: insuranceItems.length ? (insuranceItems.length + ' פוליסות · שווה-ערך חודשי') : 'אין פוליסות רשומות',
       kpiBalance: (balance >= 0 ? '+' : '−') + Math.abs(Math.round(balance)).toLocaleString('he-IL'),
@@ -1642,8 +1545,6 @@ class Component extends DCLogic {
       kpiAttentionUnit: attention.length === 1 ? 'פריט' : 'פריטים',
       kpiAttentionSub: attention.length === 0 ? 'אין תאריכים קרובים'
         : (urgentCount ? (urgentCount + ' דחופים · הקרוב ' + attention[0].badgeText) : ('הקרוב ' + attention[0].badgeText)),
-      chartBars: chartBars, hasChart: chartBars.length > 0, noChart: chartBars.length === 0,
-      yearCompareLabel: yearCompareLabel,
       upcoming: upcoming, noUpcoming: upcoming.length === 0,
       globalQuery: state.globalQuery, hasGlobalQuery: !!gq,
       onGlobalSearch: (e) => self.setState({ globalQuery: e.target.value }),
