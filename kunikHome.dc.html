@@ -529,7 +529,7 @@ const DOMAINS = [
   { key:'payments', label:'תזכורות לתשלומים', kicker:'מה לשלם ומה שולם', color:'#5E4A86', bg:'#EDE9F5',
     iconPath:'M12 3a5 5 0 0 0-5 5v3c0 1.2-.5 2.3-1.4 3.1L4 16h16l-1.6-1.9C17.5 13.3 17 12.2 17 11V8a5 5 0 0 0-5-5zM9.5 19a2.5 2.5 0 0 0 5 0',
     dateKey:'dueDate', waKey:'phone',
-    payable:true, chargeKey:'dueDate', amountKey:'amount', recurrenceKey:'recurrence',
+    payable:true, chargeKey:'dueDate', amountKey:'amount', recurrenceKey:'recurrence', paidKey:'paidDate',
     dateFields:[{key:'dueDate',label:'לתשלום'}],
     hasMonthlySummary:true, summaryDateKey:'dueDate', summaryAmountKey:'amount',
     fields:[
@@ -537,6 +537,7 @@ const DOMAINS = [
       { key:'amount', label:'סכום', type:'currency' },
       { key:'recurrence', label:'תדירות', type:'recurrence' },
       { key:'dueDate', label:'תאריך לתשלום', type:'date' },
+      { key:'paidDate', label:'שולם בתאריך', type:'date' },
       { key:'phone', label:'טלפון ליצירת קשר', type:'tel' },
       { key:'notes', label:'הערות', type:'textarea' },
     ]},
@@ -1145,14 +1146,21 @@ class Component extends DCLogic {
     const id = this.state.editingId || String(Date.now());
     const existing = (this.state.data[domain.key] || []).find(it => it.id === id);
     let history = (existing && existing.history) || [];
+    const extra = { id: id, history: history };
     if (domain.payable && existing) {
       const oldCharge = existing[domain.chargeKey];
       const newCharge = values[domain.chargeKey];
       if (oldCharge && newCharge && oldCharge !== newCharge) {
         history = history.concat([{ date: oldCharge, amount: this.parseAmount(existing[domain.amountKey]) }]);
+        extra.history = history;
+        // New billing cycle started — the old "paid on" date no longer applies,
+        // unless the user also typed a fresh one in this same edit.
+        if (domain.paidKey && values[domain.paidKey] === existing[domain.paidKey]) {
+          extra[domain.paidKey] = '';
+        }
       }
     }
-    const newItem = Object.assign({}, values, { id: id, history: history });
+    const newItem = Object.assign({}, values, extra);
     const list = this.state.data[domain.key] || [];
     const newList = this.state.editingId ? list.map(it => it.id === id ? newItem : it) : list.concat([newItem]);
     this.persist(Object.assign({}, this.state.data, { [domain.key]: newList }));
@@ -1257,6 +1265,7 @@ class Component extends DCLogic {
         fields.forEach(df => {
           const dateVal = item[df.key];
           if (!dateVal) return;
+          if (d.paidKey && df.key === d.chargeKey && item[d.paidKey] && item[d.paidKey] <= dateVal) return;
           const days = self.daysUntil(dateVal);
           if (days === null || days > 120 || days < -90) return;
           const badge = self.badgeFor(days);
@@ -1390,8 +1399,9 @@ class Component extends DCLogic {
           const sum = d.computedMonthlyKeys.reduce((s, k) => s + self.parseAmount(item[k]), 0) / self.resolveDivisor(d.computedMonthlyDivisor, item);
           computedValue = sum ? self.money(sum) : '—';
         }
+        const isPaid = d.paidKey && item[d.paidKey] && item[d.dateKey] && item[d.paidKey] <= item[d.dateKey];
         const days = d.dateKey ? self.daysUntil(item[d.dateKey]) : null;
-        const badge = days !== null ? self.badgeFor(days) : null;
+        const badge = isPaid ? { color: '#2F5D45', text: 'שולם' } : (days !== null ? self.badgeFor(days) : null);
         const phone = d.waKey ? item[d.waKey] : '';
         const wa = phone ? self.waLink(phone, 'שלום! תזכורת לגבי ' + (item[primaryField.key] || d.label) + '.') : '';
         const history = (item.history || []).slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
