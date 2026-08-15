@@ -491,6 +491,7 @@ const DOMAINS = [
     payable:true, chargeKey:'dueDate', amountKey:'amount', recurrenceKey:'recurrence', paidKey:'paidDate', periodKey:'period',
     dateFields:[{key:'dueDate',label:'לתשלום'}],
     hasMonthlySummary:true, summaryDateKey:'dueDate', summaryAmountKey:'amount',
+    computedMonthlyFromRecurrence:true, computedMonthlyLabel:'תשלום לחודש',
     fields:[
       { key:'name', label:'שם התשלום', type:'text', primary:true },
       { key:'amount', label:'סכום', type:'currency' },
@@ -610,10 +611,25 @@ const DOMAIN_OWNERS = {
   savings: ['דנה', 'אלון'],
 };
 function defaultCategories() {
-  return { contacts: DEFAULT_CONTACT_ROLES.slice(), insurance: [], health: [], savings: [] };
+  return {
+    insurance: { category: [] },
+    health: { category: [] },
+    savings: { category: [] },
+    contacts: { role: DEFAULT_CONTACT_ROLES.slice() },
+  };
 }
 function mergeCategories(parsed) {
-  return Object.assign(defaultCategories(), parsed || {});
+  const defaults = defaultCategories();
+  const merged = {};
+  Object.keys(defaults).forEach(domainKey => {
+    merged[domainKey] = Object.assign({}, defaults[domainKey], (parsed && parsed[domainKey]) || {});
+  });
+  if (parsed) {
+    Object.keys(parsed).forEach(domainKey => {
+      if (!merged[domainKey]) merged[domainKey] = parsed[domainKey];
+    });
+  }
+  return merged;
 }
 const HEBREW_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 const EMPTY_DATA = { insurance:[], income:[], savings:[], vehicles:[], health:[], payments:[], contacts:[] };
@@ -1067,15 +1083,19 @@ class Component extends DCLogic {
     const name = window.prompt('שם חדש:');
     if (!name || !name.trim()) return;
     const trimmed = name.trim();
-    const current = this.state.categories[domainKey] || [];
+    const d = this.domainByKey(domainKey);
+    const selectField = d.fields.find(f => f.type === 'select');
+    if (!selectField) return;
+    const fieldKey = selectField.key;
+    const domainCats = this.state.categories[domainKey] || {};
+    const current = domainCats[fieldKey] || [];
     if (current.indexOf(trimmed) === -1) {
-      const newCategories = Object.assign({}, this.state.categories, { [domainKey]: current.concat([trimmed]) });
+      const newDomainCats = Object.assign({}, domainCats, { [fieldKey]: current.concat([trimmed]) });
+      const newCategories = Object.assign({}, this.state.categories, { [domainKey]: newDomainCats });
       try { localStorage.setItem(STORAGE_CATS_KEY, JSON.stringify(newCategories)); } catch (e) {}
       this.setState({ categories: newCategories });
     }
-    const d = this.domainByKey(domainKey);
-    const selectField = d.fields.find(f => f.type === 'select');
-    if (selectField) this.updateField(selectField.key, trimmed);
+    this.updateField(selectField.key, trimmed);
   }
 
   triggerAttach() { if (this.attachInputRef.current) this.attachInputRef.current.click(); }
@@ -1157,6 +1177,14 @@ class Component extends DCLogic {
     const months = this.recurMonths(item[d.recurrenceKey]);
     if (months === 0) return 0;
     return amount / months;
+  }
+
+  computedMonthlyValue(item, d) {
+    if (d.computedMonthlyKeys) {
+      return d.computedMonthlyKeys.reduce((s, k) => s + this.parseAmount(item[k]), 0) / this.resolveDivisor(d.computedMonthlyDivisor, item);
+    }
+    if (d.computedMonthlyFromRecurrence) return this.monthlyEquivalent(item, d);
+    return 0;
   }
 
   // ---------- render ----------
@@ -1263,7 +1291,7 @@ class Component extends DCLogic {
       const q = (state.searchQuery || '').trim().toLowerCase();
       let raw = q ? rawAll.filter(item => d.fields.some(f => String(item[f.key] || '').toLowerCase().indexOf(q) !== -1)) : rawAll;
       const primaryField = d.fields.find(f => f.primary);
-      const colCount = d.fields.length + (d.dateKey ? 2 : 1) + (d.computedMonthlyKeys ? 1 : 0);
+      const colCount = d.fields.length + (d.dateKey ? 2 : 1) + ((d.computedMonthlyKeys || d.computedMonthlyFromRecurrence) ? 1 : 0);
       const domainColWidths = (state.colWidths && state.colWidths[d.key]) || {};
       const sortState = (state.sortBy && state.sortBy[d.key]) || null;
       const sortArrow = (key) => (sortState && sortState.key === key) ? (sortState.dir === 'asc' ? ' ▲' : ' ▼') : '';
@@ -1275,9 +1303,7 @@ class Component extends DCLogic {
           if (sortState.key === '__status__') {
             cmp = self.compareSort(a[d.dateKey], b[d.dateKey], 'date');
           } else if (sortState.key === '__computed__') {
-            const av = (d.computedMonthlyKeys || []).reduce((s, k) => s + self.parseAmount(a[k]), 0) / self.resolveDivisor(d.computedMonthlyDivisor, a);
-            const bv = (d.computedMonthlyKeys || []).reduce((s, k) => s + self.parseAmount(b[k]), 0) / self.resolveDivisor(d.computedMonthlyDivisor, b);
-            cmp = av - bv;
+            cmp = self.computedMonthlyValue(a, d) - self.computedMonthlyValue(b, d);
           } else if (sf) {
             cmp = self.compareSort(a[sortState.key], b[sortState.key], sf.type);
           } else {
@@ -1297,8 +1323,8 @@ class Component extends DCLogic {
           fontSize: f.type === 'currency' ? '14.5px' : '13px',
         }));
         let computedValue = '';
-        if (d.computedMonthlyKeys) {
-          const sum = d.computedMonthlyKeys.reduce((s, k) => s + self.parseAmount(item[k]), 0) / self.resolveDivisor(d.computedMonthlyDivisor, item);
+        if (d.computedMonthlyKeys || d.computedMonthlyFromRecurrence) {
+          const sum = self.computedMonthlyValue(item, d);
           computedValue = sum ? self.money(sum) : '—';
         }
         const isPaid = d.paidKey && item[d.paidKey] && item[d.dateKey] && item[d.paidKey] <= item[d.dateKey];
@@ -1434,7 +1460,7 @@ class Component extends DCLogic {
         hasStatusColumn: !!d.dateKey,
         statusSortArrow: sortArrow('__status__'),
         onStatusSortClick: (e) => self.setSort(d.key, '__status__', e),
-        hasComputedColumn: !!d.computedMonthlyKeys,
+        hasComputedColumn: !!(d.computedMonthlyKeys || d.computedMonthlyFromRecurrence),
         computedColumnLabel: (d.computedMonthlyLabel || '') + sortArrow('__computed__'),
         onComputedSortClick: (e) => self.setSort(d.key, '__computed__', e),
         groups: groups,
@@ -1463,7 +1489,7 @@ class Component extends DCLogic {
         const isSelect = f.type === 'select' || isRecurrence || isContact;
         const dateParts = self.currentDateParts(f.key);
         let options = [];
-        if (f.type === 'select') options = (state.categories[d.key] || []).slice();
+        if (f.type === 'select') options = ((state.categories[d.key] || {})[f.key] || []).slice();
         if (isRecurrence) options = RECURRENCES.map(r => r.label);
         if (isContact) {
           const current = state.formValues[f.key];
