@@ -431,7 +431,7 @@ const RECUR_MONTHS = { 'חד-פעמי': 0, 'חודשי': 1, 'דו-חודשי': 2
 const DOMAINS = [
   { key:'insurance', label:'ביטוחים', kicker:'פוליסות וחידושים', color:'#1B6FD1', bg:'#EAF2FD',
     iconPath:'M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z',
-    dateKey:'nextCharge', waKey:'phone',
+    dateKey:'nextCharge', waKey:'agent',
     payable:true, chargeKey:'nextCharge', amountKey:'amount', recurrenceKey:'recurrence',
     dateFields:[{key:'nextCharge',label:'חיוב הבא'}],
     groupBy:'category',
@@ -441,7 +441,6 @@ const DOMAINS = [
       { key:'category', label:'קטגוריה', type:'select' },
       { key:'company', label:'חברה מבטחת', type:'text' },
       { key:'policyNumber', label:'מספר פוליסה', type:'text' },
-      { key:'phone', label:'טלפון', type:'tel' },
       { key:'amount', label:'סכום לחיוב', type:'currency' },
       { key:'recurrence', label:'תדירות חיוב', type:'recurrence' },
       { key:'nextCharge', label:'חיוב הבא', type:'date' },
@@ -1018,6 +1017,16 @@ class Component extends DCLogic {
     return 'https://wa.me/' + digits + '?text=' + encodeURIComponent(message);
   }
 
+  resolvePhone(d, item) {
+    if (!d.waKey) return '';
+    const waField = d.fields.find(f => f.key === d.waKey);
+    if (waField && waField.type === 'contact') {
+      const contact = (this.state.data.contacts || []).find(c => c.name === item[d.waKey]);
+      return (contact && contact.phone) || '';
+    }
+    return item[d.waKey] || '';
+  }
+
   // ---------- records ----------
   openAddForm(sectionKey) {
     const d = this.domainByKey(sectionKey);
@@ -1344,7 +1353,7 @@ class Component extends DCLogic {
         const isPaid = d.paidKey && item[d.paidKey] && item[d.dateKey] && item[d.paidKey] <= item[d.dateKey];
         const days = d.dateKey ? self.daysUntil(item[d.dateKey]) : null;
         const badge = isPaid ? { color: '#2F5D45', text: 'שולם' } : (days !== null ? self.badgeFor(days) : null);
-        const phone = d.waKey ? item[d.waKey] : '';
+        const phone = self.resolvePhone(d, item);
         const wa = phone ? self.waLink(phone, 'שלום! תזכורת לגבי ' + (item[primaryField.key] || d.label) + '.') : '';
         const history = (item.history || []).slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
         const yearsMap = {};
