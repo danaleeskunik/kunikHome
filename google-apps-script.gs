@@ -14,7 +14,7 @@
 //   APP_PASSWORD      =  <הסיסמה שתרצי>
 // אם אין אף property מהשלושה — האפליקציה עובדת בלי הגנה בכלל, כמו קודם.
 
-var SHEET_NAMES = ['insurance', 'income', 'savings', 'vehicles', 'health', 'payments'];
+var SHEET_NAMES = ['insurance', 'income', 'savings', 'vehicles', 'health', 'payments', 'contacts'];
 var META_SHEET = '_meta';
 
 function getAllowedEmails() {
@@ -54,6 +54,23 @@ function checkAuth(p) {
   return false;
 }
 
+// נועל בזמן קריאה/כתיבה כדי שטעינה לא תתפוס גיליון באמצע כתיבה (clearContents
+// ואז שכתוב הן שתי פעולות נפרדות — בלי נעילה קריאה יכולה "לתפוס" את הרגע
+// שבין השתיים ולראות דומיין ריק זמנית, גם אם לא באמת נמחק כלום).
+function withLock(fn) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000);
+  } catch (e) {
+    return { status: 'error', message: 'lock timeout' };
+  }
+  try {
+    return fn();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function doGet(e) {
   var p = (e && e.parameter) ? e.parameter : {};
 
@@ -62,11 +79,11 @@ function doGet(e) {
   }
 
   if (p.action === 'save' && p.payload) {
-    var result = saveAll(JSON.parse(p.payload));
+    var result = withLock(function () { return saveAll(JSON.parse(p.payload)); });
     return reply(result, p.callback);
   }
 
-  return reply(loadAll(), p.callback);
+  return reply(withLock(loadAll), p.callback);
 }
 
 function doPost(e) {
@@ -77,15 +94,32 @@ function doPost(e) {
   var raw = (e.parameter && e.parameter.payload)
     ? e.parameter.payload
     : (e.postData ? e.postData.contents : '{}');
-  return reply(saveAll(JSON.parse(raw)), null);
+  return reply(withLock(function () { return saveAll(JSON.parse(raw)); }), null);
 }
 
 function saveAll(body) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var skipped = [];
 
   SHEET_NAMES.forEach(function (key) {
     var items = (body.data && body.data[key]) ? body.data[key] : [];
     var sheet = ss.getSheetByName(key) || ss.insertSheet(key);
+
+    // Safety guard: never silently wipe a domain that already has rows in
+    // the sheet when the incoming payload for it is empty. In normal use
+    // the client always sends every domain's full current list, so a
+    // domain arriving empty while the sheet already has real data almost
+    // always means the client's local state was never actually loaded for
+    // that domain (failed/slow fetch, fresh browser profile, etc.) rather
+    // than a genuine "delete everything" — so refuse and report it instead
+    // of clearing. Tradeoff: intentionally emptying every record in a
+    // domain from the app won't take effect on the sheet; do that directly
+    // in the sheet if it's ever really needed.
+    if (items.length === 0 && sheet.getLastRow() > 1) {
+      skipped.push(key);
+      return;
+    }
+
     sheet.clearContents();
     if (items.length === 0) return;
 
@@ -108,7 +142,9 @@ function saveAll(body) {
     meta.appendRow(['categories', JSON.stringify(body.categories)]);
   }
 
-  return { status: 'ok', savedAt: new Date().toISOString() };
+  var result = { status: 'ok', savedAt: new Date().toISOString() };
+  if (skipped.length) result.skipped = skipped;
+  return result;
 }
 
 function loadAll() {
