@@ -95,7 +95,7 @@
     </div>
   </aside>
 
-  <main style="flex:1;min-width:0;padding:30px 46px 70px;max-width:1240px;">
+  <main style="flex:1;min-width:0;padding:30px 46px 70px;max-width:1600px;">
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:26px;">
       <div style="position:relative;flex:1;max-width:420px;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A8577" stroke-width="1.8" stroke-linecap="round" style="position:absolute;top:12px;right:14px;"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
@@ -206,7 +206,7 @@
             </sc-if>
             <sc-if value="{{ grp.expanded }}" hint-placeholder-val="{{ true }}">
             <div style="overflow-x:auto;">
-              <table style="width:100%;border-collapse:collapse;">
+              <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
                 <thead>
                   <tr>
                     <sc-for list="{{ activeDomain.columns }}" as="col" hint-placeholder-count="5">
