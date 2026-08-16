@@ -1542,7 +1542,7 @@ class Component extends DCLogic {
           hint: 'אין עדיין אנשי קשר — אפשר להוסיף בתחום "אנשי קשר".',
           onAddOption: f.type === 'select' ? (() => self.addCategory(d.key)) : null,
           onChange: isContact ? ((e) => self.pickContact(f, e.target.value)) : ((e) => self.updateField(f.key, e.target.value)),
-          hasPhoneContactPicker: isPhone && contactNames.length > 0,
+          hasPhoneContactPicker: isPhone && contactNames.length > 0 && d.key !== 'contacts',
           phoneContactOptions: isPhone ? contactNames : [],
           onPickPhoneContact: isPhone ? ((e) => self.pickPhoneContact(f, e.target.value)) : null,
         };
