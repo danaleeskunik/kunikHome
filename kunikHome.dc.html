@@ -197,6 +197,29 @@
             <p style="margin:0;padding:34px 20px;text-align:center;color:#A8A293;font-size:13px;border-top:1px solid #EFE9DC;">אין תאריכים קרובים. הכל תחת שליטה.</p>
           </sc-if>
         </div>
+
+        <sc-if value="{{ hasAllReminders }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:18px;background:#FFFDF9;border:1px solid #E4DCCB;border-radius:16px;overflow:hidden;">
+            <h3 style="margin:0;padding:19px 21px 15px;font-size:14.5px;font-weight:600;">כל התזכורות שהוספתי</h3>
+            <sc-for list="{{ allReminders }}" as="u" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:8px;padding:13px 21px;border-top:1px solid #EFE9DC;">
+                <button onClick="{{ u.onClick }}" type="button" style="display:flex;align-items:center;gap:11px;flex:1;min-width:0;border:none;background:transparent;cursor:pointer;text-align:right;padding:0;" style-hover="background:#FBF8F1">
+                  <span style="width:3px;height:32px;border-radius:2px;flex:none;background:{{ u.badgeColor }};"></span>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ u.name }}</div>
+                    <div style="font-size:11.5px;color:#8A8577;">{{ u.subtitle }}</div>
+                  </div>
+                  <span style="font-size:11.5px;font-weight:600;color:{{ u.badgeColor }};white-space:nowrap;">{{ u.badgeText }}</span>
+                </button>
+                <sc-if value="{{ u.hasWa }}" hint-placeholder-val="{{ false }}">
+                  <a href="{{ u.waLink }}" target="_blank" rel="noopener" title="תזכורת בוואטסאפ לקבוצה" style="width:28px;height:28px;border-radius:8px;background:#E8EFE7;color:#2F5D45;display:flex;align-items:center;justify-content:center;flex:none;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                  </a>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
       </div>
     </sc-if>
 
@@ -1354,6 +1377,32 @@ class Component extends DCLogic {
     });
     attention.sort((a, b) => a.sortVal < b.sortVal ? -1 : (a.sortVal > b.sortVal ? 1 : 0));
     const upcoming = attention.slice(0, this.props.upcomingCount ?? 6);
+
+    // ALL custom reminders, regardless of how far away — a persistent
+    // overview list, unlike "attention" above which only surfaces near-term
+    // items within the app's usual 31-day lookahead window.
+    const allReminders = [];
+    DOMAINS.forEach(d => {
+      const primaryField = d.fields.find(f => f.primary);
+      (state.data[d.key] || []).forEach(item => {
+        const dateVal = item.extraReminderDate;
+        if (!dateVal) return;
+        const days = self.daysUntil(dateVal);
+        if (days === null) return;
+        const badge = self.badgeFor(days);
+        const baseName = item[primaryField.key] || d.label;
+        const wa = (days <= 30 && days >= -90) ? WA_GROUP_LINK : '';
+        allReminders.push({
+          key: item.id + 'allReminder', sortVal: dateVal,
+          name: item.extraReminderNote || baseName,
+          subtitle: d.label + ' · ' + baseName + ' · ' + self.formatDate(dateVal),
+          badgeColor: badge.color, badgeText: badge.text,
+          hasWa: !!wa, waLink: wa,
+          onClick: () => self.setActiveSection(d.key),
+        });
+      });
+    });
+    allReminders.sort((a, b) => a.sortVal < b.sortVal ? -1 : (a.sortVal > b.sortVal ? 1 : 0));
     const urgentCount = attention.filter(a => a.badgeColor === '#A8492F').length;
 
     // global search
@@ -1674,6 +1723,7 @@ class Component extends DCLogic {
       kpiAttentionSub: attention.length === 0 ? 'אין תאריכים קרובים'
         : (urgentCount ? (urgentCount + ' דחופים · הקרוב ' + attention[0].badgeText) : ('הקרוב ' + attention[0].badgeText)),
       upcoming: upcoming, noUpcoming: upcoming.length === 0,
+      allReminders: allReminders, hasAllReminders: allReminders.length > 0,
       globalQuery: state.globalQuery, hasGlobalQuery: !!gq,
       onGlobalSearch: (e) => self.setState({ globalQuery: e.target.value }),
       clearGlobalSearch: () => self.setState({ globalQuery: '' }),
