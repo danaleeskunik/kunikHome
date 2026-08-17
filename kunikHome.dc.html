@@ -177,14 +177,21 @@
         <div style="margin-top:18px;background:#FFFDF9;border:1px solid #E4DCCB;border-radius:16px;overflow:hidden;">
           <h3 style="margin:0;padding:19px 21px 15px;font-size:14.5px;font-weight:600;">דורש טיפול</h3>
           <sc-for list="{{ upcoming }}" as="u" hint-placeholder-count="4">
-            <button onClick="{{ u.onClick }}" style="display:flex;align-items:center;gap:11px;padding:13px 21px;width:100%;border:none;border-top:1px solid #EFE9DC;background:transparent;cursor:pointer;text-align:right;" style-hover="background:#FBF8F1">
-              <span style="width:3px;height:32px;border-radius:2px;flex:none;background:{{ u.badgeColor }};"></span>
-              <div style="flex:1;min-width:0;">
-                <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ u.name }}</div>
-                <div style="font-size:11.5px;color:#8A8577;">{{ u.subtitle }}</div>
-              </div>
-              <span style="font-size:11.5px;font-weight:600;color:{{ u.badgeColor }};white-space:nowrap;">{{ u.badgeText }}</span>
-            </button>
+            <div style="display:flex;align-items:center;gap:8px;padding:13px 21px;border-top:1px solid #EFE9DC;">
+              <button onClick="{{ u.onClick }}" type="button" style="display:flex;align-items:center;gap:11px;flex:1;min-width:0;border:none;background:transparent;cursor:pointer;text-align:right;padding:0;" style-hover="background:#FBF8F1">
+                <span style="width:3px;height:32px;border-radius:2px;flex:none;background:{{ u.badgeColor }};"></span>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ u.name }}</div>
+                  <div style="font-size:11.5px;color:#8A8577;">{{ u.subtitle }}</div>
+                </div>
+                <span style="font-size:11.5px;font-weight:600;color:{{ u.badgeColor }};white-space:nowrap;">{{ u.badgeText }}</span>
+              </button>
+              <sc-if value="{{ u.hasWa }}" hint-placeholder-val="{{ false }}">
+                <a href="{{ u.waLink }}" target="_blank" rel="noopener" title="תזכורת בוואטסאפ לקבוצה" style="width:28px;height:28px;border-radius:8px;background:#E8EFE7;color:#2F5D45;display:flex;align-items:center;justify-content:center;flex:none;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                </a>
+              </sc-if>
+            </div>
           </sc-for>
           <sc-if value="{{ noUpcoming }}" hint-placeholder-val="{{ false }}">
             <p style="margin:0;padding:34px 20px;text-align:center;color:#A8A293;font-size:13px;border-top:1px solid #EFE9DC;">אין תאריכים קרובים. הכל תחת שליטה.</p>
@@ -452,6 +459,7 @@ const RECURRENCES = [
   { label: 'שנתי', months: 12 },
 ];
 const RECUR_MONTHS = { 'חד-פעמי': 0, 'חודשי': 1, 'דו-חודשי': 2, 'רבעוני': 3, 'חצי-שנתי': 6, 'שנתי': 12 };
+const WA_GROUP_LINK = 'https://chat.whatsapp.com/ER9EGi2GxgS6fv3xS7hsdM?s=cl&p=i&ilr=4';
 
 const DOMAINS = [
   { key:'insurance', label:'ביטוחים', kicker:'פוליסות וחידושים', color:'#1B6FD1', bg:'#EAF2FD',
@@ -471,6 +479,8 @@ const DOMAINS = [
       { key:'nextCharge', label:'חיוב הבא', type:'date' },
       { key:'agent', label:'איש קשר', type:'contact' },
       { key:'notes', label:'הערות', type:'textarea' },
+      { key:'extraReminderDate', label:'תזכורת נוספת', type:'date', hideFromTable:true },
+      { key:'extraReminderNote', label:'על מה התזכורת', type:'text', hideFromTable:true },
     ]},
   { key:'savings', label:'חסכונות והשקעות', kicker:'יתרות וגופים מנהלים', color:'#2F6E6E', bg:'#E6F0EF',
     iconPath:'M4 20V10M10 20V4M16 20v-7M3 20h18',
@@ -483,6 +493,8 @@ const DOMAINS = [
       { key:'balance', label:'יתרה נוכחית', type:'currency' },
       { key:'type', label:'סוג', type:'text' },
       { key:'notes', label:'הערות', type:'textarea' },
+      { key:'extraReminderDate', label:'תזכורת נוספת', type:'date', hideFromTable:true },
+      { key:'extraReminderNote', label:'על מה התזכורת', type:'text', hideFromTable:true },
     ]},
   { key:'health', label:'תרופות ובריאות', kicker:'טיפולים ותורים', color:'#A8492F', bg:'#F7EBE6',
     iconPath:'M12 21s-7.5-4.6-10-9C.3 8 2 4 6 4c2.2 0 3.7 1.3 6 3.7C14.3 5.3 15.8 4 18 4c4 0 5.7 4 4 8-2.5 4.4-10 9-10 9z',
@@ -497,6 +509,8 @@ const DOMAINS = [
       { key:'phone', label:'טלפון ליצירת קשר', type:'tel' },
       { key:'nextAppt', label:'תור הבא', type:'date' },
       { key:'notes', label:'הערות', type:'textarea' },
+      { key:'extraReminderDate', label:'תזכורת נוספת', type:'date', hideFromTable:true },
+      { key:'extraReminderNote', label:'על מה התזכורת', type:'text', hideFromTable:true },
     ]},
   { key:'vehicles', label:'רכבים', kicker:'רישיונות, טסט וביטוח', color:'#34546F', bg:'#E8EEF3',
     iconPath:'M5 16v-3.2L6.6 8A2 2 0 0 1 8.5 6.7h7A2 2 0 0 1 17.4 8L19 12.8V16M5 16h14M5 16v2H7v-2M17 16v2h2v-2M8 12.5h8',
@@ -515,6 +529,8 @@ const DOMAINS = [
       { key:'insuranceExpiry', label:'תוקף ביטוח', type:'date' },
       { key:'garage', label:'מוסך/איש קשר', type:'contact' },
       { key:'notes', label:'הערות', type:'textarea' },
+      { key:'extraReminderDate', label:'תזכורת נוספת', type:'date', hideFromTable:true },
+      { key:'extraReminderNote', label:'על מה התזכורת', type:'text', hideFromTable:true },
     ]},
   { key:'payments', label:'תזכורות לתשלומים', kicker:'מה לשלם ומה שולם', color:'#5E4A86', bg:'#EDE9F5',
     iconPath:'M12 3a5 5 0 0 0-5 5v3c0 1.2-.5 2.3-1.4 3.1L4 16h16l-1.6-1.9C17.5 13.3 17 12.2 17 11V8a5 5 0 0 0-5-5zM9.5 19a2.5 2.5 0 0 0 5 0',
@@ -532,6 +548,8 @@ const DOMAINS = [
       { key:'paidDate', label:'שולם בתאריך', type:'date' },
       { key:'phone', label:'טלפון ליצירת קשר', type:'tel' },
       { key:'notes', label:'הערות', type:'textarea' },
+      { key:'extraReminderDate', label:'תזכורת נוספת', type:'date', hideFromTable:true },
+      { key:'extraReminderNote', label:'על מה התזכורת', type:'text', hideFromTable:true },
     ]},
   { key:'income', label:'הכנסות', kicker:'מקורות ותדירות', color:'#2F5D45', bg:'#E8EFE7',
     iconPath:'M3 16l6-6 4 4 8-8M15 6h6v6',
@@ -543,6 +561,8 @@ const DOMAINS = [
       { key:'frequency', label:'תדירות', type:'text' },
       { key:'date', label:'תאריך אחרון שהתקבל', type:'date' },
       { key:'notes', label:'הערות', type:'textarea' },
+      { key:'extraReminderDate', label:'תזכורת נוספת', type:'date', hideFromTable:true },
+      { key:'extraReminderNote', label:'על מה התזכורת', type:'text', hideFromTable:true },
     ]},
   { key:'contacts', label:'אנשי קשר', kicker:'סוכנים, רופאים, מוסכים', color:'#6E6A5E', bg:'#EFEADF',
     iconPath:'M16 20v-1.5a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4V20M10 10.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M18 10.5a3 3 0 1 0 0-6M21 20v-1.5a3.8 3.8 0 0 0-2.5-3.6',
@@ -554,6 +574,8 @@ const DOMAINS = [
       { key:'phone', label:'טלפון', type:'tel' },
       { key:'email', label:'אימייל', type:'text' },
       { key:'notes', label:'הערות', type:'textarea' },
+      { key:'extraReminderDate', label:'תזכורת נוספת', type:'date', hideFromTable:true },
+      { key:'extraReminderNote', label:'על מה התזכורת', type:'text', hideFromTable:true },
     ]},
 ];
 
@@ -1300,8 +1322,33 @@ class Component extends DCLogic {
             name: item[primaryField.key] || d.label,
             subtitle: d.label + (df.label ? ' · ' + df.label : '') + ' · ' + self.formatDate(dateVal),
             badgeColor: badge.color, badgeText: badge.text,
+            hasWa: false, waLink: '',
             onClick: () => self.setActiveSection(d.key),
           });
+        });
+      });
+    });
+    // custom, free-form reminder — available on every record in every domain,
+    // separate from each domain's own built-in date fields above. Surfaces on
+    // the home page the same way, and always links to the family WhatsApp
+    // group (not a specific contact) once within 30 days.
+    DOMAINS.forEach(d => {
+      const primaryField = d.fields.find(f => f.primary);
+      (state.data[d.key] || []).forEach(item => {
+        const dateVal = item.extraReminderDate;
+        if (!dateVal) return;
+        const days = self.daysUntil(dateVal);
+        if (days === null || days > 31 || days < -90) return;
+        const badge = self.badgeFor(days);
+        const baseName = item[primaryField.key] || d.label;
+        const wa = days <= 30 ? WA_GROUP_LINK : '';
+        attention.push({
+          key: item.id + 'extraReminder', sortVal: dateVal,
+          name: item.extraReminderNote || baseName,
+          subtitle: d.label + ' · ' + baseName + ' · ' + self.formatDate(dateVal),
+          badgeColor: badge.color, badgeText: badge.text,
+          hasWa: !!wa, waLink: wa,
+          onClick: () => self.setActiveSection(d.key),
         });
       });
     });
@@ -1339,7 +1386,8 @@ class Component extends DCLogic {
       const q = (state.searchQuery || '').trim().toLowerCase();
       let raw = q ? rawAll.filter(item => d.fields.some(f => String(item[f.key] || '').toLowerCase().indexOf(q) !== -1)) : rawAll;
       const primaryField = d.fields.find(f => f.primary);
-      const colCount = d.fields.length + (d.dateKey ? 2 : 1) + ((d.computedMonthlyKeys || d.computedMonthlyFromRecurrence) ? 1 : 0);
+      const tableFields = d.fields.filter(f => !f.hideFromTable);
+      const colCount = tableFields.length + (d.dateKey ? 2 : 1) + ((d.computedMonthlyKeys || d.computedMonthlyFromRecurrence) ? 1 : 0);
       const domainColWidths = (state.colWidths && state.colWidths[d.key]) || {};
       const sortState = (state.sortBy && state.sortBy[d.key]) || null;
       const sortArrow = (key) => (sortState && sortState.key === key) ? (sortState.dir === 'asc' ? ' ▲' : ' ▼') : '';
@@ -1362,7 +1410,7 @@ class Component extends DCLogic {
       }
 
       const buildItem = (item) => {
-        const cells = d.fields.map(f => ({
+        const cells = tableFields.map(f => ({
           value: f.type === 'date' ? (self.formatDate(item[f.key]) || '—')
             : f.type === 'currency' ? (self.formatAmountPlain(item[f.key]) || '—')
             : (item[f.key] || '—'),
@@ -1479,7 +1527,7 @@ class Component extends DCLogic {
         groups = [{ key: 'all', label: '', items: built, hasHeader: false, totalLabel: '', expanded: true, collapsed: false, chevronStyle: '', onToggle: null }];
       }
 
-      const columns = d.fields.map(f => {
+      const columns = tableFields.map(f => {
         const defaultWidth = f.type === 'textarea' ? 260 : f.type === 'currency' ? 150 : 130;
         const width = domainColWidths[f.key] || defaultWidth;
         return {
