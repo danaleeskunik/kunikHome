@@ -437,6 +437,9 @@
                 </sc-for>
               </div>
             </sc-if>
+            <sc-if value="{{ f.isCheckbox }}" hint-placeholder-val="{{ false }}">
+              <input type="checkbox" checked="{{ f.checked }}" onChange="{{ f.onToggleCheckbox }}" style="width:20px;height:20px;cursor:pointer;accent-color:#1B6FD1;" />
+            </sc-if>
           </div>
         </sc-for>
 
@@ -497,6 +500,7 @@ const DOMAINS = [
       { key:'category', label:'קטגוריה', type:'select' },
       { key:'company', label:'חברה מבטחת', type:'text' },
       { key:'policyNumber', label:'מספר פוליסה', type:'text' },
+      { key:'fileAttached', label:'פוליסה מצורפת', type:'checkbox' },
       { key:'amount', label:'סכום לחיוב', type:'currency' },
       { key:'recurrence', label:'תדירות חיוב', type:'recurrence' },
       { key:'nextCharge', label:'חיוב הבא', type:'date' },
@@ -1462,6 +1466,7 @@ class Component extends DCLogic {
         const cells = tableFields.map(f => ({
           value: f.type === 'date' ? (self.formatDate(item[f.key]) || '—')
             : f.type === 'currency' ? (self.formatAmountPlain(item[f.key]) || '—')
+            : f.type === 'checkbox' ? (item[f.key] === 'true' ? '✓' : '—')
             : (item[f.key] || '—'),
           color: f.primary ? '#22261F' : '#4E4A41',
           weight: f.type === 'currency' ? '700' : (f.primary ? '600' : '400'),
@@ -1630,6 +1635,7 @@ class Component extends DCLogic {
         const isRecurrence = f.type === 'recurrence';
         const isContact = f.type === 'contact';
         const isPhone = f.type === 'tel';
+        const isCheckbox = f.type === 'checkbox';
         const isMultiSelect = f.type === 'multiselect';
         const isDate = f.type === 'date';
         const isSelect = f.type === 'select' || isRecurrence;
@@ -1653,7 +1659,10 @@ class Component extends DCLogic {
           isSelect: isSelect,
           isMultiSelect: isMultiSelect,
           isDate: isDate,
-          isInput: f.type !== 'textarea' && !isSelect && !isMultiSelect && !isDate,
+          isInput: f.type !== 'textarea' && !isSelect && !isMultiSelect && !isDate && !isCheckbox,
+          isCheckbox: isCheckbox,
+          checked: state.formValues[f.key] === 'true',
+          onToggleCheckbox: isCheckbox ? (() => self.updateField(f.key, state.formValues[f.key] === 'true' ? '' : 'true')) : null,
           value: state.formValues[f.key] || '',
           dateDay: dateParts.day, dateMonth: dateParts.month, dateYear: dateParts.year,
           onDayChange: (e) => self.updateDatePart(f.key, 'day', e.target.value),
