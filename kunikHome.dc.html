@@ -240,18 +240,7 @@
           </div>
         </div>
 
-        <sc-for list="{{ activeDomain.groups }}" as="grp" hint-placeholder-count="1">
-          <div style="margin-top:20px;background:#FFFDF9;border:1px solid #E4DCCB;border-radius:16px;overflow:hidden;">
-            <sc-if value="{{ grp.hasHeader }}" hint-placeholder-val="{{ false }}">
-              <div onClick="{{ grp.onToggle }}" style="display:flex;align-items:center;justify-content:space-between;padding:15px 22px;background:{{ activeDomain.colorBg }};cursor:pointer;">
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{{ activeDomain.color }}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="{{ grp.chevronStyle }}flex:none;"><path d="M9 6l6 6-6 6"></path></svg>
-                  <span style="font-weight:600;font-size:14px;color:{{ activeDomain.color }};">{{ grp.label }}</span>
-                </div>
-                <span style="font-weight:600;font-size:14px;color:{{ activeDomain.color }};font-variant-numeric:tabular-nums;">סה"כ {{ grp.totalLabel }}</span>
-              </div>
-            </sc-if>
-            <sc-if value="{{ grp.expanded }}" hint-placeholder-val="{{ true }}">
+        <div style="margin-top:20px;background:#FFFDF9;border:1px solid #E4DCCB;border-radius:16px;overflow:hidden;">
             <div style="overflow-x:auto;">
               <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
                 <thead>
@@ -269,7 +258,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <sc-for list="{{ grp.items }}" as="item" hint-placeholder-count="3">
+                  <sc-for list="{{ activeDomain.flatItems }}" as="item" hint-placeholder-count="3">
                     <tr style="background:{{ item.rowBg }};">
                       <sc-for list="{{ item.cells }}" as="cell" hint-placeholder-count="5">
                         <td style="padding:13px 16px;font-size:{{ cell.fontSize }};color:{{ cell.color }};font-weight:{{ cell.weight }};border-bottom:1px solid #EFE9DC;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums;">{{ cell.value }}</td>
@@ -348,9 +337,7 @@
                 </tbody>
               </table>
             </div>
-            </sc-if>
-          </div>
-        </sc-for>
+        </div>
 
         <sc-if value="{{ activeDomain.hasMonthlyTotal }}" hint-placeholder-val="{{ false }}">
           <div style="margin-top:16px;display:flex;align-items:center;justify-content:space-between;background:{{ activeDomain.colorBg }};padding:15px 22px;border-radius:14px;">
@@ -1621,6 +1608,7 @@ class Component extends DCLogic {
         computedColumnLabel: (d.computedMonthlyLabel || '') + sortArrow('__computed__'),
         onComputedSortClick: (e) => self.setSort(d.key, '__computed__', e),
         groups: groups,
+        flatItems: built,
         isEmpty: built.length === 0,
         showEmptyCta: rawAll.length === 0,
         emptyMessage: rawAll.length === 0 ? 'אין עדיין רשומות בתחום הזה.' : 'לא נמצאו תוצאות התואמות לסינון.',
