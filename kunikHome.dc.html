@@ -1563,8 +1563,9 @@ class Component extends DCLogic {
           const val = String(item[d.groupBy] || '').trim();
           const gKey = val || 'zzz-none';
           const gLabel = val || 'ללא קטגוריה';
-          if (!map[gKey]) map[gKey] = { key: gKey, label: gLabel, items: [] };
+          if (!map[gKey]) map[gKey] = { key: gKey, label: gLabel, items: [], total: 0 };
           map[gKey].items.push(built[idx]);
+          if (d.payable) map[gKey].total += self.monthlyEquivalent(item, d);
         });
         groups = Object.keys(map).sort((a, b) => {
           if (a === 'zzz-none') return 1;
@@ -1572,10 +1573,12 @@ class Component extends DCLogic {
           return a.localeCompare(b, 'he');
         }).map(k => {
           const count = map[k].items.length;
+          const countLabel = count + (count === 1 ? ' רשומה' : ' רשומות');
+          const groupTotalLabel = d.payable && map[k].total ? self.money(map[k].total) + ' · ' + countLabel : countLabel;
           const collapsed = !!(state.collapsedGroups && state.collapsedGroups[d.key + '|' + map[k].key]);
           return {
             key: map[k].key, label: map[k].label, items: map[k].items,
-            hasHeader: true, totalLabel: count + (count === 1 ? ' רשומה' : ' רשומות'),
+            hasHeader: true, totalLabel: groupTotalLabel,
             collapsed: collapsed, expanded: !collapsed,
             chevronStyle: 'transform:rotate(' + (collapsed ? '-90deg' : '0deg') + ');transition:transform .15s ease;',
             onToggle: (e) => self.toggleGroupCollapse(d.key, map[k].key, e),
