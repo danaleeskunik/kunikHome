@@ -496,6 +496,7 @@ const DOMAINS = [
     groupBy:'category',
     fields:[
       { key:'type', label:'סוג ביטוח', type:'text', primary:true },
+      { key:'active', label:'פעיל', type:'checkbox', default:'true' },
       { key:'owner', label:'שייך ל', type:'multiselect' },
       { key:'category', label:'קטגוריה', type:'select' },
       { key:'company', label:'חברה מבטחת', type:'text' },
@@ -1106,6 +1107,7 @@ class Component extends DCLogic {
     const d = this.domainByKey(sectionKey);
     const initial = {};
     if (d && d.recurrenceKey) initial[d.recurrenceKey] = 'חודשי';
+    if (d) d.fields.forEach(f => { if (f.default !== undefined) initial[f.key] = f.default; });
     this.setState({ formOpen: true, editingSection: sectionKey, editingId: null, formValues: initial, formFiles: [], datePartDrafts: {} });
   }
 
@@ -1269,6 +1271,7 @@ class Component extends DCLogic {
   }
 
   monthlyEquivalent(item, d) {
+    if (item.active === '') return 0;
     const amount = this.parseAmount(item[d.amountKey]);
     if (!amount) return 0;
     const months = this.recurMonths(item[d.recurrenceKey]);
@@ -1325,6 +1328,7 @@ class Component extends DCLogic {
     payables.forEach(d => {
       (state.data[d.key] || []).forEach(it => {
         (it.history || []).forEach(h => { if (String(h.date || '').slice(0, 7) === thisMonthKey) monthExpense += (h.amount || 0); });
+        if (it.active === '') return;
         if (String(it[d.chargeKey] || '').slice(0, 7) === thisMonthKey) monthExpense += self.parseAmount(it[d.amountKey]);
       });
     });
@@ -1466,7 +1470,7 @@ class Component extends DCLogic {
         const cells = tableFields.map(f => ({
           value: f.type === 'date' ? (self.formatDate(item[f.key]) || '—')
             : f.type === 'currency' ? (self.formatAmountPlain(item[f.key]) || '—')
-            : f.type === 'checkbox' ? (item[f.key] === 'true' ? '✓' : '—')
+            : f.type === 'checkbox' ? ((item[f.key] !== undefined ? item[f.key] === 'true' : f.default === 'true') ? '✓' : '—')
             : (item[f.key] || '—'),
           color: f.primary ? '#22261F' : '#4E4A41',
           weight: f.type === 'currency' ? '700' : (f.primary ? '600' : '400'),
@@ -1559,8 +1563,9 @@ class Component extends DCLogic {
           const val = String(item[d.groupBy] || '').trim();
           const gKey = val || 'zzz-none';
           const gLabel = val || 'ללא קטגוריה';
-          if (!map[gKey]) map[gKey] = { key: gKey, label: gLabel, items: [] };
+          if (!map[gKey]) map[gKey] = { key: gKey, label: gLabel, items: [], total: 0 };
           map[gKey].items.push(built[idx]);
+          if (d.payable) map[gKey].total += self.monthlyEquivalent(item, d);
         });
         groups = Object.keys(map).sort((a, b) => {
           if (a === 'zzz-none') return 1;
@@ -1568,10 +1573,12 @@ class Component extends DCLogic {
           return a.localeCompare(b, 'he');
         }).map(k => {
           const count = map[k].items.length;
+          const countLabel = count + (count === 1 ? ' רשומה' : ' רשומות');
+          const groupTotalLabel = d.payable && map[k].total ? self.money(map[k].total) + ' · ' + countLabel : countLabel;
           const collapsed = !!(state.collapsedGroups && state.collapsedGroups[d.key + '|' + map[k].key]);
           return {
             key: map[k].key, label: map[k].label, items: map[k].items,
-            hasHeader: true, totalLabel: count + (count === 1 ? ' רשומה' : ' רשומות'),
+            hasHeader: true, totalLabel: groupTotalLabel,
             collapsed: collapsed, expanded: !collapsed,
             chevronStyle: 'transform:rotate(' + (collapsed ? '-90deg' : '0deg') + ');transition:transform .15s ease;',
             onToggle: (e) => self.toggleGroupCollapse(d.key, map[k].key, e),
@@ -1661,8 +1668,8 @@ class Component extends DCLogic {
           isDate: isDate,
           isInput: f.type !== 'textarea' && !isSelect && !isMultiSelect && !isDate && !isCheckbox,
           isCheckbox: isCheckbox,
-          checked: state.formValues[f.key] === 'true',
-          onToggleCheckbox: isCheckbox ? (() => self.updateField(f.key, state.formValues[f.key] === 'true' ? '' : 'true')) : null,
+          checked: state.formValues[f.key] !== undefined ? state.formValues[f.key] === 'true' : f.default === 'true',
+          onToggleCheckbox: isCheckbox ? (() => self.updateField(f.key, (state.formValues[f.key] !== undefined ? state.formValues[f.key] === 'true' : f.default === 'true') ? '' : 'true')) : null,
           value: state.formValues[f.key] || '',
           dateDay: dateParts.day, dateMonth: dateParts.month, dateYear: dateParts.year,
           onDayChange: (e) => self.updateDatePart(f.key, 'day', e.target.value),
