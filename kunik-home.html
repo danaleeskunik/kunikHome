@@ -546,6 +546,7 @@ const DOMAINS = [
     dateFields:[{key:'licenseExpiry',label:'תוקף רישיון'},{key:'insuranceExpiry',label:'תוקף ביטוח'}],
     hasTotalSummary:true, totalAmountKeys:['comprehensiveCost','mandatoryCost','licenseCost'], totalAmountDivisor:12, totalLabelText:'סה"כ הוצאה חודשית',
     computedMonthlyKeys:['comprehensiveCost','mandatoryCost','licenseCost'], computedMonthlyLabel:'עלות חודשית ממוצעת', computedMonthlyDivisor:12,
+    historyGroups:[{ dateKey:'insuranceExpiry', amountKeys:['comprehensiveCost','mandatoryCost'] }],
     fields:[
       { key:'nickname', label:'רכב (דגם/כינוי)', type:'text', primary:true },
       { key:'plate', label:'מספר רישוי', type:'text' },
@@ -1237,6 +1238,17 @@ class Component extends DCLogic {
           extra[domain.paidKey] = '';
         }
       }
+    }
+    if (domain.historyGroups && existing) {
+      domain.historyGroups.forEach(g => {
+        const oldDate = existing[g.dateKey];
+        const newDate = values[g.dateKey];
+        if (oldDate && newDate && oldDate !== newDate) {
+          const amount = g.amountKeys.reduce((s, k) => s + this.parseAmount(existing[k]), 0);
+          history = history.concat([{ date: oldDate, amount: amount, period: '' }]);
+          extra.history = history;
+        }
+      });
     }
     const newItem = Object.assign({}, values, extra);
     const list = this.state.data[domain.key] || [];
