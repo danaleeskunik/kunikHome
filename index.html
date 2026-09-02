@@ -596,8 +596,10 @@ const DOMAINS = [
   { key:'contacts', label:'אנשי קשר', kicker:'סוכנים, רופאים, מוסכים', color:'#6E6A5E', bg:'#EFEADF',
     iconPath:'M16 20v-1.5a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4V20M10 10.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M18 10.5a3 3 0 1 0 0-6M21 20v-1.5a3.8 3.8 0 0 0-2.5-3.6',
     dateKey:null, waKey:'phone',
+    groupBy:'category',
     fields:[
       { key:'name', label:'שם', type:'text', primary:true },
+      { key:'category', label:'קטגוריה', type:'select' },
       { key:'role', label:'תפקיד', type:'select' },
       { key:'org', label:'חברה/מרפאה', type:'text' },
       { key:'phone', label:'טלפון', type:'tel' },
@@ -697,7 +699,7 @@ function defaultCategories() {
     insurance: { category: [] },
     health: { category: [] },
     savings: { category: [] },
-    contacts: { role: DEFAULT_CONTACT_ROLES.slice() },
+    contacts: { role: DEFAULT_CONTACT_ROLES.slice(), category: [] },
   };
 }
 function mergeCategories(parsed) {
@@ -1179,14 +1181,10 @@ class Component extends DCLogic {
     this.setState(s => ({ formValues: Object.assign({}, s.formValues, { [field.key]: contact.phone }) }));
   }
 
-  addCategory(domainKey) {
+  addCategory(domainKey, fieldKey) {
     const name = window.prompt('שם חדש:');
     if (!name || !name.trim()) return;
     const trimmed = name.trim();
-    const d = this.domainByKey(domainKey);
-    const selectField = d.fields.find(f => f.type === 'select');
-    if (!selectField) return;
-    const fieldKey = selectField.key;
     const domainCats = this.state.categories[domainKey] || {};
     const current = domainCats[fieldKey] || [];
     if (current.indexOf(trimmed) === -1) {
@@ -1195,7 +1193,7 @@ class Component extends DCLogic {
       try { localStorage.setItem(STORAGE_CATS_KEY, JSON.stringify(newCategories)); } catch (e) {}
       this.setState({ categories: newCategories });
     }
-    this.updateField(selectField.key, trimmed);
+    this.updateField(fieldKey, trimmed);
   }
 
   triggerAttach() { if (this.attachInputRef.current) this.attachInputRef.current.click(); }
@@ -1699,7 +1697,7 @@ class Component extends DCLogic {
           canAddOption: f.type === 'select',
           hasHint: isContact && contactNames.length === 0,
           hint: 'אין עדיין אנשי קשר — אפשר להוסיף בתחום "אנשי קשר".',
-          onAddOption: f.type === 'select' ? (() => self.addCategory(d.key)) : null,
+          onAddOption: f.type === 'select' ? (() => self.addCategory(d.key, f.key)) : null,
           onChange: isContact ? ((e) => self.pickContact(f, e.target.value)) : ((e) => self.updateField(f.key, e.target.value)),
           hasPhoneContactPicker: isPhone && contactNames.length > 0 && d.key !== 'contacts',
           phoneContactOptions: isPhone ? contactNames : [],
