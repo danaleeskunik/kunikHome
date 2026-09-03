@@ -289,6 +289,22 @@
               </button>
               <sc-if value="{{ cbar.isOpen }}" hint-placeholder-val="{{ false }}">
                 <div style="padding:0 21px 14px;">
+                  <sc-if value="{{ cbar.hasCatMonthBars }}" hint-placeholder-val="{{ false }}">
+                    <div style="background:#FBF8F1;border:1px solid #EFE9DC;border-radius:12px;overflow:hidden;margin-bottom:10px;">
+                      <p style="margin:0;padding:10px 15px 4px;font-size:11.5px;font-weight:600;color:#8A8577;">השוואה חודשית</p>
+                      <sc-for list="{{ cbar.catMonthBars }}" as="cmo" hint-placeholder-count="3">
+                        <div style="padding:8px 15px;">
+                          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                            <span style="font-size:12.5px;font-weight:500;color:#22261F;">{{ cmo.label }}</span>
+                            <span style="font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:#22261F;">{{ cmo.amount }}</span>
+                          </div>
+                          <div style="height:6px;border-radius:3px;background:#F1ECDF;overflow:hidden;">
+                            <div style="height:100%;border-radius:3px;background:#1B6FD1;width:{{ cmo.barPct }}%;"></div>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
                   <sc-if value="{{ cbar.hasTransactions }}" hint-placeholder-val="{{ false }}">
                     <div style="background:#FBF8F1;border:1px solid #EFE9DC;border-radius:12px;overflow:hidden;">
                       <sc-for list="{{ cbar.transactions }}" as="tx" hint-placeholder-count="4">
@@ -1896,6 +1912,16 @@ class Component extends DCLogic {
               pendingBadge: r.p ? 'ממתין' : '',
             }))
           : [];
+        // Per-category monthly comparison — always across ALL months (ignores the
+        // top-level month filter, since the whole point is comparing months).
+        const catMonthAgg = isOpen ? EXPENSE_MONTH_ORDER.map(mo => ({
+          mo: mo, sum: baseRecords.filter(r => r.c === name && r.mo === mo).reduce((s, r) => s + r.a, 0),
+        })) : [];
+        const maxCatMonth = Math.max.apply(null, catMonthAgg.map(m => m.sum).concat([1]));
+        const catMonthBars = catMonthAgg.map(m => ({
+          key: m.mo, label: EXPENSE_MONTH_LABEL[m.mo], amount: fmt(m.sum) + ' ₪',
+          barPct: Math.max(4, Math.round((m.sum / maxCatMonth) * 100)),
+        }));
         return {
           key: name, name: name,
           amount: fmt(amount) + ' ₪',
@@ -1907,6 +1933,8 @@ class Component extends DCLogic {
           transactions: transactions,
           hasTransactions: transactions.length > 0,
           txCount: transactions.length,
+          catMonthBars: catMonthBars,
+          hasCatMonthBars: catMonthBars.length > 0,
         };
       });
 
