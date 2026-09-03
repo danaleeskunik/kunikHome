@@ -1881,16 +1881,36 @@ class Component extends DCLogic {
       const viewRecords = monthFilter === 'all' ? baseRecords : baseRecords.filter(r => r.mo === monthFilter);
       const agg = computeExpenseAgg(viewRecords);
       const fmt = (n) => Math.round(n).toLocaleString('he-IL');
+      // The month label (e.g. "אוגוסט") names the card's BILLING cycle, which
+      // rarely lines up with the calendar month of the actual purchase date —
+      // show the real date span alongside it so that's never ambiguous.
+      const shortDate = (iso) => {
+        const p = String(iso).split('-');
+        return p.length === 3 ? (parseInt(p[2], 10) + '.' + parseInt(p[1], 10)) : iso;
+      };
+      const monthRangeLabel = (recs) => {
+        if (!recs.length) return '';
+        const dates = recs.map(r => r.d).sort();
+        // Installment purchases and early-billed subscriptions keep their
+        // original charge date across every cycle they're split/repeated over,
+        // which can drag the earliest date far outside the cycle's real
+        // ~30-day window. Trim the earliest 10% instead of using a fixed
+        // day-cutoff — robust regardless of how far back an outlier sits,
+        // since it's always a small minority of a cycle's transactions.
+        const trimIdx = Math.floor(dates.length * 0.1);
+        const first = shortDate(dates[trimIdx]), last = shortDate(dates[dates.length - 1]);
+        return ' (' + (first === last ? first : first + '–' + last) + ')';
+      };
 
       const monthAggAll = EXPENSE_MONTH_ORDER.map(mo => {
         const recs = (hideTourism ? EXPENSE_RECORDS.filter(r => r.c !== EXPENSE_TOURISM_CATEGORY) : EXPENSE_RECORDS).filter(r => r.mo === mo);
-        return { mo: mo, sum: recs.reduce((s, r) => s + r.a, 0) };
+        return { mo: mo, sum: recs.reduce((s, r) => s + r.a, 0), rangeLabel: monthRangeLabel(recs) };
       });
       const maxMonthSum = Math.max.apply(null, monthAggAll.map(m => m.sum).concat([1]));
 
       const expMonthBars = monthAggAll.map(m => ({
         key: m.mo,
-        label: EXPENSE_MONTH_LABEL[m.mo],
+        label: EXPENSE_MONTH_LABEL[m.mo] + m.rangeLabel,
         amount: fmt(m.sum) + ' ₪',
         barPct: Math.max(4, Math.round((m.sum / maxMonthSum) * 100)),
         isActive: monthFilter === m.mo,
@@ -1921,12 +1941,13 @@ class Component extends DCLogic {
           : [];
         // Per-category monthly comparison — always across ALL months (ignores the
         // top-level month filter, since the whole point is comparing months).
-        const catMonthAgg = isOpen ? EXPENSE_MONTH_ORDER.map(mo => ({
-          mo: mo, sum: baseRecords.filter(r => r.c === name && r.mo === mo).reduce((s, r) => s + r.a, 0),
-        })) : [];
+        const catMonthAgg = isOpen ? EXPENSE_MONTH_ORDER.map(mo => {
+          const recs = baseRecords.filter(r => r.c === name && r.mo === mo);
+          return { mo: mo, sum: recs.reduce((s, r) => s + r.a, 0), rangeLabel: monthRangeLabel(recs) };
+        }) : [];
         const maxCatMonth = Math.max.apply(null, catMonthAgg.map(m => m.sum).concat([1]));
         const catMonthBars = catMonthAgg.map(m => ({
-          key: m.mo, label: EXPENSE_MONTH_LABEL[m.mo], amount: fmt(m.sum) + ' ₪',
+          key: m.mo, label: EXPENSE_MONTH_LABEL[m.mo] + m.rangeLabel, amount: fmt(m.sum) + ' ₪',
           barPct: Math.max(4, Math.round((m.sum / maxCatMonth) * 100)),
           isActive: catMonth === m.mo,
           color: catMonth === m.mo ? '#1B6FD1' : '#B9CBDE',
