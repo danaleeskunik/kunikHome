@@ -1926,11 +1926,11 @@ class Component extends DCLogic {
         const isOpen = state.expOpenCategory === name;
         const catColor = EXPENSE_CAT_COLORS[i % EXPENSE_CAT_COLORS.length];
         const catMonth = isOpen ? state.expOpenCategoryMonth : null;
-        // Transactions for the open category ignore the top-level month filter
-        // (same scope as the comparison chart below) and instead respect
-        // whichever month the user clicked in that comparison, if any.
-        const catRecords = baseRecords.filter(r => r.c === name && (!catMonth || r.mo === catMonth));
-        const transactions = isOpen
+        // Transaction list stays empty until a specific month is picked in the
+        // comparison chart below — opening a category shows only the monthly
+        // totals, not every transaction across all months at once.
+        const catRecords = catMonth ? baseRecords.filter(r => r.c === name && r.mo === catMonth) : [];
+        const transactions = catMonth
           ? catRecords.slice().sort((a, b) => b.d.localeCompare(a.d)).map(r => ({
               date: self.formatDate(r.d) || r.d,
               merchant: r.m,
