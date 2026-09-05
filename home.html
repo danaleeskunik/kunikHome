@@ -1951,7 +1951,12 @@ class Component extends DCLogic {
         const pct = agg.totalSum ? Math.round((amount / agg.totalSum) * 100) : 0;
         const isOpen = state.expOpenCategory === name;
         const catColor = EXPENSE_CAT_COLORS[i % EXPENSE_CAT_COLORS.length];
-        const catMonth = isOpen ? state.expOpenCategoryMonth : null;
+        // If a specific month is already picked at the top level, opening a
+        // category should jump straight to that month's transactions — showing
+        // the all-months comparison again would just repeat what "לפי חודש"
+        // above already narrowed down. The comparison chart only makes sense
+        // when the top-level scope is "all months".
+        const catMonth = isOpen ? (monthFilter !== 'all' ? monthFilter : state.expOpenCategoryMonth) : null;
         // Transaction list stays empty until a specific month is picked in the
         // comparison chart below — opening a category shows only the monthly
         // totals, not every transaction across all months at once.
@@ -1965,9 +1970,11 @@ class Component extends DCLogic {
               pendingBadge: r.p ? 'ממתין' : '',
             }))
           : [];
-        // Per-category monthly comparison — always across ALL months (ignores the
-        // top-level month filter, since the whole point is comparing months).
-        const catMonthAgg = isOpen ? EXPENSE_MONTH_ORDER.map(mo => {
+        // Per-category monthly comparison — across ALL months (ignores the
+        // top-level month filter, since the whole point is comparing months) —
+        // only shown when the top level itself is scoped to "all months";
+        // otherwise it would just repeat the single month already selected.
+        const catMonthAgg = (isOpen && monthFilter === 'all') ? EXPENSE_MONTH_ORDER.map(mo => {
           const recs = baseRecords.filter(r => r.c === name && r.mo === mo);
           return { mo: mo, sum: recs.reduce((s, r) => s + r.a, 0), rangeLabel: monthRangeLabel(recs) };
         }) : [];
