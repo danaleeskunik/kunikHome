@@ -1425,7 +1425,15 @@ class Component extends DCLogic {
         const newDate = values[g.dateKey];
         if (oldDate && newDate && oldDate !== newDate) {
           const amount = g.amountKeys.reduce((s, k) => s + this.parseAmount(existing[k]), 0);
-          history = history.concat([{ date: oldDate, amount: amount, period: '' }]);
+          // Keep the per-component breakdown (e.g. מקיף/חובה) visible on the
+          // history chip, not just the combined total — reuses the existing
+          // "period" label slot since it already renders before the amount.
+          const breakdown = g.amountKeys.map(k => {
+            const field = domain.fields.find(f => f.key === k);
+            const label = field ? field.label.replace(/^עלות (ביטוח )?/, '') : k;
+            return label + ': ' + this.money(this.parseAmount(existing[k]));
+          }).join(' · ');
+          history = history.concat([{ date: oldDate, amount: amount, period: breakdown }]);
           extra.history = history;
         }
       });
