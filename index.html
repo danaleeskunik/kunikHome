@@ -328,20 +328,43 @@
         </div>
 
         <div style="margin:18px 0 4px;background:#FFFDF9;border:1px solid #E4DCCB;border-radius:16px;overflow:hidden;">
-          <h3 style="margin:0;padding:19px 21px 15px;font-size:14.5px;font-weight:600;">בתי עסק מובילים</h3>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:19px 21px 15px;">
+            <h3 style="margin:0;font-size:14.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ expMerchantHeading }}</h3>
+            <input type="text" placeholder="חיפוש בית עסק…" value="{{ expMerchantQuery }}" onChange="{{ onExpMerchantQuery }}" style="padding:7px 12px;border-radius:100px;border:1px solid #E4DCCB;background:#FBF8F1;font-size:12.5px;width:140px;outline:none;flex:none;" />
+          </div>
           <sc-for list="{{ expMerchantBars }}" as="mer" hint-placeholder-count="6">
-            <div style="padding:9px 21px;border-top:1px solid #EFE9DC;">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;gap:10px;">
-                <span style="font-size:13px;font-weight:500;color:#22261F;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ mer.name }}</span>
-                <span style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:#22261F;flex:none;">{{ mer.amount }}</span>
-              </div>
-              <div style="height:6px;border-radius:3px;background:#F1ECDF;overflow:hidden;">
-                <div style="height:100%;border-radius:3px;background:#B9CBDE;width:{{ mer.barPct }}%;"></div>
-              </div>
+            <div style="border-top:1px solid #EFE9DC;">
+              <button onClick="{{ mer.onClick }}" type="button" style="display:block;width:100%;border:none;background:transparent;cursor:pointer;text-align:right;padding:9px 21px;" style-hover="background:#FBF8F1">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;gap:10px;">
+                  <span style="font-size:13px;font-weight:500;color:#22261F;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ mer.name }}</span>
+                  <span style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:#22261F;flex:none;">{{ mer.amount }}</span>
+                </div>
+                <div style="height:6px;border-radius:3px;background:#F1ECDF;overflow:hidden;">
+                  <div style="height:100%;border-radius:3px;background:#B9CBDE;width:{{ mer.barPct }}%;"></div>
+                </div>
+              </button>
+              <sc-if value="{{ mer.hasTransactions }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:0 21px 12px;">
+                  <div style="background:#FBF8F1;border:1px solid #EFE9DC;border-radius:12px;overflow:hidden;">
+                    <sc-for list="{{ mer.transactions }}" as="tx" hint-placeholder-count="4">
+                      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 15px;border-top:1px solid #EFE9DC;">
+                        <div style="min-width:0;">
+                          <div style="font-size:12.5px;font-weight:600;color:#22261F;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ tx.category }}</div>
+                          <div style="font-size:11px;color:#8A8577;">{{ tx.date }} · {{ tx.card }}<sc-if value="{{ tx.pendingBadge }}" hint-placeholder-val="{{ false }}"> · {{ tx.pendingBadge }}</sc-if></div>
+                        </div>
+                        <span style="font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:#22261F;flex:none;">{{ tx.amount }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
             </div>
           </sc-for>
           <sc-if value="{{ expNoMerchants }}" hint-placeholder-val="{{ false }}">
             <p style="margin:0;padding:34px 20px;text-align:center;color:#A8A293;font-size:13px;border-top:1px solid #EFE9DC;">אין נתונים להצגה בטווח הזה.</p>
+          </sc-if>
+          <sc-if value="{{ expNoMerchantMatch }}" hint-placeholder-val="{{ false }}">
+            <p style="margin:0;padding:34px 20px;text-align:center;color:#A8A293;font-size:13px;border-top:1px solid #EFE9DC;">לא נמצא בית עסק תואם.</p>
           </sc-if>
         </div>
       </div>
@@ -859,7 +882,7 @@ function computeExpenseAgg(records) {
   });
   const totalSum = records.reduce((s, r) => s + r.a, 0);
   const catEntries = Object.entries(byCategory).filter(function (e) { return e[1] > 0; }).sort(function (a, b) { return b[1] - a[1]; });
-  const merchantEntries = Object.entries(byMerchant).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 10);
+  const merchantEntries = Object.entries(byMerchant).sort(function (a, b) { return b[1] - a[1]; });
   return { totalRecords: records.length, totalSum: totalSum, byMonth: byMonth, catEntries: catEntries, merchantEntries: merchantEntries, pendingTotal: pendingTotal };
 }
 
@@ -894,6 +917,8 @@ class Component extends DCLogic {
     expMonth: 'all',
     expOpenCategory: null,
     expOpenCategoryMonth: null,
+    expMerchantQuery: '',
+    expOpenMerchant: null,
   };
 
   fileInputRef = React.createRef();
@@ -1125,6 +1150,8 @@ class Component extends DCLogic {
   setExpMonth(key) { this.setState(s => ({ expMonth: s.expMonth === key ? 'all' : key, expOpenCategory: null, expOpenCategoryMonth: null })); }
   toggleExpCategory(name) { this.setState(s => ({ expOpenCategory: s.expOpenCategory === name ? null : name, expOpenCategoryMonth: null })); }
   setExpCategoryMonth(mo) { this.setState(s => ({ expOpenCategoryMonth: s.expOpenCategoryMonth === mo ? null : mo })); }
+  setExpMerchantQuery(v) { this.setState({ expMerchantQuery: v, expOpenMerchant: null }); }
+  toggleExpMerchant(name) { this.setState(s => ({ expOpenMerchant: s.expOpenMerchant === name ? null : name })); }
 
   toggleGroupCollapse(domainKey, groupKey, e) {
     if (e) e.stopPropagation();
@@ -1969,10 +1996,34 @@ class Component extends DCLogic {
         };
       });
 
-      const expMerchantBars = agg.merchantEntries.map((entry, i) => ({
-        key: entry[0] + i, name: entry[0], amount: fmt(entry[1]) + ' ₪',
-        barPct: Math.max(3, Math.round((entry[1] / (agg.merchantEntries[0] ? agg.merchantEntries[0][1] : 1)) * 100)),
-      }));
+      const merchantQuery = (state.expMerchantQuery || '').trim().toLowerCase();
+      const merchantSourceEntries = merchantQuery
+        ? agg.merchantEntries.filter(e => e[0].toLowerCase().indexOf(merchantQuery) !== -1)
+        : agg.merchantEntries.slice(0, 10);
+      const maxMerchantAmt = merchantSourceEntries.length ? merchantSourceEntries[0][1] : 1;
+      const expMerchantBars = merchantSourceEntries.map((entry, i) => {
+        const name = entry[0], amount = entry[1];
+        const isOpen = state.expOpenMerchant === name;
+        const merchantTx = isOpen
+          ? viewRecords.filter(r => r.m === name).slice().sort((a, b) => b.d.localeCompare(a.d)).map(r => ({
+              date: self.formatDate(r.d) || r.d,
+              amount: fmt(r.a) + ' ₪',
+              card: r.card,
+              category: r.c,
+              pendingBadge: r.p ? 'ממתין' : '',
+            }))
+          : [];
+        return {
+          key: name + i, name: name, amount: fmt(amount) + ' ₪',
+          barPct: Math.max(3, Math.round((amount / maxMerchantAmt) * 100)),
+          isOpen: isOpen,
+          onClick: () => self.toggleExpMerchant(name),
+          transactions: merchantTx,
+          hasTransactions: merchantTx.length > 0,
+        };
+      });
+      const expMerchantHeading = merchantQuery ? ('תוצאות עבור "' + state.expMerchantQuery.trim() + '"') : 'בתי עסק מובילים';
+      const expNoMerchantMatch = !!merchantQuery && merchantSourceEntries.length === 0;
 
       const monthsInScope = monthFilter === 'all' ? EXPENSE_MONTH_ORDER.length : 1;
       const avgPerMonth = monthsInScope ? agg.totalSum / monthsInScope : agg.totalSum;
@@ -1996,7 +2047,11 @@ class Component extends DCLogic {
         expNoCats: expCatBars.length === 0,
         expMerchantBars: expMerchantBars,
         expHasMerchants: expMerchantBars.length > 0,
-        expNoMerchants: expMerchantBars.length === 0,
+        expNoMerchants: expMerchantBars.length === 0 && !merchantQuery,
+        expNoMerchantMatch: expNoMerchantMatch,
+        expMerchantHeading: expMerchantHeading,
+        expMerchantQuery: state.expMerchantQuery || '',
+        onExpMerchantQuery: (e) => self.setExpMerchantQuery(e.target.value),
         onToggleExpTourism: () => self.toggleExpTourism(),
       };
     }
