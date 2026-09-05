@@ -483,6 +483,7 @@
                                   </sc-if>
                                   <span style="color:#6E6A5E;">{{ h.dateLabel }}</span>
                                   <span style="font-weight:600;">{{ h.amountLabel }}</span>
+                                  <button onClick="{{ h.onEdit }}" title="עריכת פירוט" style="border:none;background:transparent;color:#A8A293;cursor:pointer;padding:0;line-height:1;font-size:12px;">✎</button>
                                   <button onClick="{{ h.onRemove }}" title="הסרה" style="border:none;background:transparent;color:#A8A293;cursor:pointer;padding:0;line-height:1;font-size:15px;">×</button>
                                 </span>
                               </sc-for>
@@ -1471,6 +1472,16 @@ class Component extends DCLogic {
     this.persist(Object.assign({}, this.state.data, { [domain.key]: list }));
   }
 
+  editHistory(domain, item, index) {
+    const entry = (item.history || [])[index];
+    if (!entry) return;
+    const next = window.prompt('פירוט (לדוגמה: מקיף: 3,600 ₪ · חובה: 1,200 ₪):', entry.period || '');
+    if (next === null) return;
+    const history = item.history.map((h, i) => i === index ? Object.assign({}, h, { period: next }) : h);
+    const list = (this.state.data[domain.key] || []).map(it => it.id === item.id ? Object.assign({}, it, { history: history }) : it);
+    this.persist(Object.assign({}, this.state.data, { [domain.key]: list }));
+  }
+
   toggleHistory(id) { this.setState(s => ({ openHistoryId: s.openHistoryId === id ? null : id })); }
 
   recurMonths(value) {
@@ -1730,6 +1741,7 @@ class Component extends DCLogic {
             amountLabel: self.money(h.amount || 0),
             hasPeriod: !!h.period,
             periodLabel: h.period || '',
+            onEdit: () => self.editHistory(d, item, idx),
             onRemove: () => self.removeHistory(d, item, idx),
           };
         });
