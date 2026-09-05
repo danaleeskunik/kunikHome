@@ -264,7 +264,7 @@
                 <span style="font-size:13px;font-weight:{{ mbar.labelWeight }};color:#22261F;">{{ mbar.label }}</span>
                 <span style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:#22261F;">{{ mbar.amount }}</span>
               </div>
-              <div style="height:{{ mbar.barThickness }}px;border-radius:4px;background:#F1ECDF;overflow:hidden;">
+              <div style="height:9px;border-radius:4px;background:#F1ECDF;overflow:hidden;">
                 <div style="height:100%;border-radius:4px;background:{{ mbar.color }};width:{{ mbar.barPct }}%;"></div>
               </div>
             </button>
@@ -1939,10 +1939,6 @@ class Component extends DCLogic {
         label: EXPENSE_MONTH_LABEL[m.mo] + m.rangeLabel,
         amount: fmt(m.sum) + ' ₪',
         barPct: Math.max(4, Math.round((m.sum / maxMonthSum) * 100)),
-        // Bar thickness scales with the month's total too (not just length),
-        // same idea as the category breakdown below, so the heaviest month
-        // visually pops instead of all three bars reading as equal weight.
-        barThickness: Math.round(4 + (m.sum / maxMonthSum) * 9),
         isActive: monthFilter === m.mo,
         color: monthFilter === m.mo ? '#1B6FD1' : '#B9CBDE',
         labelWeight: monthFilter === m.mo ? '700' : '500',
