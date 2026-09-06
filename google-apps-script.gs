@@ -14,7 +14,7 @@
 //   APP_PASSWORD      =  <הסיסמה שתרצי>
 // אם אין אף property מהשלושה — האפליקציה עובדת בלי הגנה בכלל, כמו קודם.
 
-var SHEET_NAMES = ['insurance', 'income', 'savings', 'vehicles', 'health', 'payments', 'contacts'];
+var SHEET_NAMES = ['insurance', 'income', 'savings', 'vehicles', 'health', 'payments', 'contacts', 'expenseFlags'];
 var META_SHEET = '_meta';
 
 function getAllowedEmails() {

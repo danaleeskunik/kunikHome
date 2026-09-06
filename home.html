@@ -228,10 +228,16 @@
             <p style="margin:0 0 5px;font-size:12px;font-weight:600;color:#8A8577;letter-spacing:.6px;">{{ expScopeLabel }}</p>
             <h2 style="margin:0;font-size:29px;font-weight:700;letter-spacing:-.6px;line-height:1.15;">הוצאות</h2>
           </div>
-          <button onClick="{{ onToggleExpTourism }}" type="button" style="display:flex;align-items:center;gap:9px;border:1px solid #E4DCCB;background:#FFFDF9;border-radius:100px;padding:9px 16px;cursor:pointer;" style-hover="background:#FBF8F1">
-            <span style="width:9px;height:9px;border-radius:50%;flex:none;background:{{ expToggleDotColor }};"></span>
-            <span style="font-size:12.5px;font-weight:600;color:#22261F;">{{ expToggleLabel }}</span>
-          </button>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <button onClick="{{ onToggleExpTourism }}" type="button" style="display:flex;align-items:center;gap:9px;border:1px solid #E4DCCB;background:#FFFDF9;border-radius:100px;padding:9px 16px;cursor:pointer;" style-hover="background:#FBF8F1">
+              <span style="width:9px;height:9px;border-radius:50%;flex:none;background:{{ expToggleDotColor }};"></span>
+              <span style="font-size:12.5px;font-weight:600;color:#22261F;">{{ expToggleLabel }}</span>
+            </button>
+            <button onClick="{{ onToggleExpOneTime }}" type="button" style="display:flex;align-items:center;gap:9px;border:1px solid #E4DCCB;background:#FFFDF9;border-radius:100px;padding:9px 16px;cursor:pointer;" style-hover="background:#FBF8F1">
+              <span style="width:9px;height:9px;border-radius:50%;flex:none;background:{{ expOneTimeToggleDotColor }};"></span>
+              <span style="font-size:12.5px;font-weight:600;color:#22261F;">{{ expOneTimeToggleLabel }}</span>
+            </button>
+          </div>
         </div>
         <p style="margin:-14px 0 22px;font-size:12px;color:#8A8577;">{{ expToggleSub }}</p>
 
@@ -309,6 +315,7 @@
                                     <div style="font-size:12px;font-weight:600;color:#22261F;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ tx.merchant }}</div>
                                     <div style="font-size:10.5px;color:#8A8577;">{{ tx.date }} · {{ tx.card }}<sc-if value="{{ tx.pendingBadge }}" hint-placeholder-val="{{ false }}"> · {{ tx.pendingBadge }}</sc-if></div>
                                   </div>
+                                  <button onClick="{{ tx.onToggleFlag }}" type="button" title="{{ tx.flagTitle }}" style="border:none;background:transparent;cursor:pointer;padding:2px 4px;font-size:13px;line-height:1;flex:none;color:{{ tx.flagColor }};">{{ tx.flagChar }}</button>
                                   <span style="font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:#22261F;flex:none;">{{ tx.amount }}</span>
                                 </div>
                               </sc-for>
@@ -326,6 +333,7 @@
                             <div style="font-size:12.5px;font-weight:600;color:#22261F;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ tx.merchant }}</div>
                             <div style="font-size:11px;color:#8A8577;">{{ tx.date }} · {{ tx.card }}<sc-if value="{{ tx.pendingBadge }}" hint-placeholder-val="{{ false }}"> · {{ tx.pendingBadge }}</sc-if></div>
                           </div>
+                          <button onClick="{{ tx.onToggleFlag }}" type="button" title="{{ tx.flagTitle }}" style="border:none;background:transparent;cursor:pointer;padding:2px 4px;font-size:14px;line-height:1;flex:none;color:{{ tx.flagColor }};">{{ tx.flagChar }}</button>
                           <span style="font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:#22261F;flex:none;">{{ tx.amount }}</span>
                         </div>
                       </sc-for>
@@ -365,6 +373,7 @@
                           <div style="font-size:12.5px;font-weight:600;color:#22261F;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ tx.category }}</div>
                           <div style="font-size:11px;color:#8A8577;">{{ tx.date }} · {{ tx.card }}<sc-if value="{{ tx.pendingBadge }}" hint-placeholder-val="{{ false }}"> · {{ tx.pendingBadge }}</sc-if></div>
                         </div>
+                        <button onClick="{{ tx.onToggleFlag }}" type="button" title="{{ tx.flagTitle }}" style="border:none;background:transparent;cursor:pointer;padding:2px 4px;font-size:14px;line-height:1;flex:none;color:{{ tx.flagColor }};">{{ tx.flagChar }}</button>
                         <span style="font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:#22261F;flex:none;">{{ tx.amount }}</span>
                       </div>
                     </sc-for>
@@ -877,9 +886,12 @@ function mergeCategories(parsed) {
   return merged;
 }
 const HEBREW_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
-const EMPTY_DATA = { insurance:[], income:[], savings:[], vehicles:[], health:[], payments:[], contacts:[] };
+const EMPTY_DATA = { insurance:[], income:[], savings:[], vehicles:[], health:[], payments:[], contacts:[], expenseFlags:[] };
 
 const EXPENSE_TOURISM_CATEGORY = 'תיירות ונופש';
+// Stable identity for one EXPENSE_RECORDS entry — used to mark a specific transaction
+// (not a whole merchant) as a one-off large expense to exclude from averages.
+function expenseRecordKey(r) { return r.d + '|' + r.m + '|' + r.a + '|' + r.card; }
 const EXPENSE_MONTH_LABEL = {'01-January':'ינואר','02-February':'פברואר','03-March':'מרץ','04-April':'אפריל','05-May':'מאי','06-June':'יוני','07-July':'יולי','08-August':'אוגוסט','09-September':'ספטמבר','10-October':'אוקטובר'};
 const EXPENSE_MONTH_ORDER = ['01-January','02-February','03-March','04-April','05-May','06-June','07-July','08-August','09-September','10-October'];
 const EXPENSE_CAT_COLORS = ['#8C4A5C','#1B6FD1','#2F6E6E','#5E4A86','#7D8B5A','#34546F','#8A8577','#2F5D45','#4F7A8C','#6E4A6E'];
@@ -1182,6 +1194,14 @@ class Component extends DCLogic {
   setActiveSection(key) { this.setState({ activeSection: key, searchQuery: '', globalQuery: '', openHistoryId: null }); }
 
   toggleExpTourism() { this.setState(s => ({ expHideTourism: !s.expHideTourism })); }
+  toggleExpOneTime() { this.setState(s => ({ expHideOneTime: !s.expHideOneTime })); }
+  toggleExpenseFlag(record) {
+    const key = expenseRecordKey(record);
+    const list = this.state.data.expenseFlags || [];
+    const exists = list.some(f => f.id === key);
+    const next = exists ? list.filter(f => f.id !== key) : list.concat([{ id: key }]);
+    this.persist(Object.assign({}, this.state.data, { expenseFlags: next }));
+  }
   setExpMonth(key) { this.setState(s => ({ expMonth: s.expMonth === key ? 'all' : key, expOpenCategory: null, expOpenCategoryMonth: null })); }
   toggleExpCategory(name, e) {
     const btn = e && e.currentTarget;
@@ -1948,8 +1968,11 @@ class Component extends DCLogic {
     let expData = {};
     if (isExpenses) {
       const hideTourism = !!state.expHideTourism;
+      const hideOneTime = !!state.expHideOneTime;
+      const flaggedKeys = new Set((state.data.expenseFlags || []).map(f => f.id));
+      const passesExpFilters = r => (!hideTourism || r.c !== EXPENSE_TOURISM_CATEGORY) && (!hideOneTime || !flaggedKeys.has(expenseRecordKey(r)));
       const monthFilter = state.expMonth || 'all';
-      const baseRecords = hideTourism ? EXPENSE_RECORDS.filter(r => r.c !== EXPENSE_TOURISM_CATEGORY) : EXPENSE_RECORDS;
+      const baseRecords = EXPENSE_RECORDS.filter(passesExpFilters);
       const viewRecords = monthFilter === 'all' ? baseRecords : baseRecords.filter(r => r.mo === monthFilter);
       const agg = computeExpenseAgg(viewRecords);
       const fmt = (n) => Math.round(n).toLocaleString('he-IL');
@@ -1975,7 +1998,7 @@ class Component extends DCLogic {
       };
 
       const monthAggAll = EXPENSE_MONTH_ORDER.map(mo => {
-        const recs = (hideTourism ? EXPENSE_RECORDS.filter(r => r.c !== EXPENSE_TOURISM_CATEGORY) : EXPENSE_RECORDS).filter(r => r.mo === mo);
+        const recs = EXPENSE_RECORDS.filter(passesExpFilters).filter(r => r.mo === mo);
         return { mo: mo, sum: recs.reduce((s, r) => s + r.a, 0), rangeLabel: monthRangeLabel(recs) };
       });
       const maxMonthSum = Math.max.apply(null, monthAggAll.map(m => m.sum).concat([1]));
@@ -2014,6 +2037,10 @@ class Component extends DCLogic {
               amount: fmt(r.a) + ' ₪',
               card: r.card,
               pendingBadge: r.p ? 'ממתין' : '',
+              flagChar: flaggedKeys.has(expenseRecordKey(r)) ? '★' : '☆',
+              flagColor: flaggedKeys.has(expenseRecordKey(r)) ? '#C9A227' : '#D8D2C2',
+              flagTitle: flaggedKeys.has(expenseRecordKey(r)) ? 'הוצאה חד-פעמית מסומנת — לחצי להסרה' : 'סמני כהוצאה חד-פעמית גדולה',
+              onToggleFlag: () => self.toggleExpenseFlag(r),
             }))
           : [];
         // Per-category monthly comparison — across ALL months (ignores the
@@ -2075,6 +2102,10 @@ class Component extends DCLogic {
               card: r.card,
               category: r.c,
               pendingBadge: r.p ? 'ממתין' : '',
+              flagChar: flaggedKeys.has(expenseRecordKey(r)) ? '★' : '☆',
+              flagColor: flaggedKeys.has(expenseRecordKey(r)) ? '#C9A227' : '#D8D2C2',
+              flagTitle: flaggedKeys.has(expenseRecordKey(r)) ? 'הוצאה חד-פעמית מסומנת — לחצי להסרה' : 'סמני כהוצאה חד-פעמית גדולה',
+              onToggleFlag: () => self.toggleExpenseFlag(r),
             }))
           : [];
         return {
@@ -2097,7 +2128,14 @@ class Component extends DCLogic {
         expHideTourism: hideTourism,
         expToggleDotColor: hideTourism ? '#A8492F' : '#7FBF9A',
         expToggleLabel: hideTourism ? 'חו"ל מנוטרל' : 'כולל חו"ל',
-        expToggleSub: hideTourism ? 'הוצאות בחו"ל (כולל הטיול) לא נכללות בסכומים' : 'לחצי כדי לנטרל הוצאות בחו"ל, לכל חודש בנפרד',
+        expHideOneTime: hideOneTime,
+        expOneTimeToggleDotColor: hideOneTime ? '#A8492F' : '#7FBF9A',
+        expOneTimeToggleLabel: hideOneTime ? 'חד-פעמיות מנוטרל' : 'כולל חד-פעמיות',
+        onToggleExpOneTime: () => self.toggleExpOneTime(),
+        expToggleSub: (hideTourism && hideOneTime) ? 'הוצאות בחו"ל (כולל הטיול) והוצאות חד-פעמיות מסומנות לא נכללות בסכומים'
+          : hideTourism ? 'הוצאות בחו"ל (כולל הטיול) לא נכללות בסכומים'
+          : hideOneTime ? 'הוצאות חד-פעמיות מסומנות לא נכללות בסכומים'
+          : 'לחצי על אחד הכפתורים כדי לנטרל הוצאות בחו"ל או חד-פעמיות מסומנות',
         expScopeLabel: monthFilter === 'all'
           ? (EXPENSE_MONTH_LABEL[EXPENSE_MONTH_ORDER[0]] + '–' + EXPENSE_MONTH_LABEL[EXPENSE_MONTH_ORDER[EXPENSE_MONTH_ORDER.length - 1]] + ' 2026')
           : (EXPENSE_MONTH_LABEL[monthFilter] + ' 2026'),
