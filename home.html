@@ -311,11 +311,13 @@
                             <div style="padding:0 15px 10px;">
                               <sc-for list="{{ cmo.transactions }}" as="tx" hint-placeholder-count="4">
                                 <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border-top:1px solid #EFE9DC;">
-                                  <div style="min-width:0;">
-                                    <div style="font-size:12px;font-weight:600;color:#22261F;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ tx.merchant }}</div>
-                                    <div style="font-size:10.5px;color:#8A8577;">{{ tx.date }} · {{ tx.card }}<sc-if value="{{ tx.pendingBadge }}" hint-placeholder-val="{{ false }}"> · {{ tx.pendingBadge }}</sc-if></div>
+                                  <div style="display:flex;align-items:center;gap:5px;min-width:0;">
+                                    <button onClick="{{ tx.onToggleFlag }}" type="button" title="{{ tx.flagTitle }}" style="border:none;background:transparent;cursor:pointer;padding:2px;font-size:13px;line-height:1;flex:none;color:{{ tx.flagColor }};">{{ tx.flagChar }}</button>
+                                    <div style="min-width:0;">
+                                      <div style="font-size:12px;font-weight:600;color:#22261F;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ tx.merchant }}</div>
+                                      <div style="font-size:10.5px;color:#8A8577;">{{ tx.date }} · {{ tx.card }}<sc-if value="{{ tx.pendingBadge }}" hint-placeholder-val="{{ false }}"> · {{ tx.pendingBadge }}</sc-if></div>
+                                    </div>
                                   </div>
-                                  <button onClick="{{ tx.onToggleFlag }}" type="button" title="{{ tx.flagTitle }}" style="border:none;background:transparent;cursor:pointer;padding:2px 4px;font-size:13px;line-height:1;flex:none;color:{{ tx.flagColor }};">{{ tx.flagChar }}</button>
                                   <span style="font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:#22261F;flex:none;">{{ tx.amount }}</span>
                                 </div>
                               </sc-for>
@@ -329,11 +331,13 @@
                     <div style="background:#FBF8F1;border:1px solid #EFE9DC;border-radius:12px;overflow:hidden;">
                       <sc-for list="{{ cbar.transactions }}" as="tx" hint-placeholder-count="4">
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 15px;border-top:1px solid #EFE9DC;">
-                          <div style="min-width:0;">
-                            <div style="font-size:12.5px;font-weight:600;color:#22261F;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ tx.merchant }}</div>
-                            <div style="font-size:11px;color:#8A8577;">{{ tx.date }} · {{ tx.card }}<sc-if value="{{ tx.pendingBadge }}" hint-placeholder-val="{{ false }}"> · {{ tx.pendingBadge }}</sc-if></div>
+                          <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+                            <button onClick="{{ tx.onToggleFlag }}" type="button" title="{{ tx.flagTitle }}" style="border:none;background:transparent;cursor:pointer;padding:2px;font-size:14px;line-height:1;flex:none;color:{{ tx.flagColor }};">{{ tx.flagChar }}</button>
+                            <div style="min-width:0;">
+                              <div style="font-size:12.5px;font-weight:600;color:#22261F;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ tx.merchant }}</div>
+                              <div style="font-size:11px;color:#8A8577;">{{ tx.date }} · {{ tx.card }}<sc-if value="{{ tx.pendingBadge }}" hint-placeholder-val="{{ false }}"> · {{ tx.pendingBadge }}</sc-if></div>
+                            </div>
                           </div>
-                          <button onClick="{{ tx.onToggleFlag }}" type="button" title="{{ tx.flagTitle }}" style="border:none;background:transparent;cursor:pointer;padding:2px 4px;font-size:14px;line-height:1;flex:none;color:{{ tx.flagColor }};">{{ tx.flagChar }}</button>
                           <span style="font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:#22261F;flex:none;">{{ tx.amount }}</span>
                         </div>
                       </sc-for>
@@ -1975,6 +1979,13 @@ class Component extends DCLogic {
       const baseRecords = EXPENSE_RECORDS.filter(passesExpFilters);
       const viewRecords = monthFilter === 'all' ? baseRecords : baseRecords.filter(r => r.mo === monthFilter);
       const agg = computeExpenseAgg(viewRecords);
+      // Transaction LISTS you actually click through (as opposed to the totals) stay
+      // filtered by tourism only, never by the one-time flag — so flagging a
+      // transaction while it's on screen doesn't yank it out of the list you're
+      // looking at. Only the aggregated numbers above (agg/baseRecords/viewRecords)
+      // should shrink when "חד-פעמיות מנוטרל" is on.
+      const displayBaseRecords = hideTourism ? EXPENSE_RECORDS.filter(r => r.c !== EXPENSE_TOURISM_CATEGORY) : EXPENSE_RECORDS;
+      const displayViewRecords = monthFilter === 'all' ? displayBaseRecords : displayBaseRecords.filter(r => r.mo === monthFilter);
       const fmt = (n) => Math.round(n).toLocaleString('he-IL');
       // The month label (e.g. "אוגוסט") names the card's BILLING cycle, which
       // rarely lines up with the calendar month of the actual purchase date —
@@ -2029,7 +2040,7 @@ class Component extends DCLogic {
         // Transaction list stays empty until a specific month is picked in the
         // comparison chart below — opening a category shows only the monthly
         // totals, not every transaction across all months at once.
-        const catRecords = catMonth ? baseRecords.filter(r => r.c === name && r.mo === catMonth) : [];
+        const catRecords = catMonth ? displayBaseRecords.filter(r => r.c === name && r.mo === catMonth) : [];
         const transactions = catMonth
           ? catRecords.slice().sort((a, b) => b.d.localeCompare(a.d)).map(r => ({
               date: self.formatDate(r.d) || r.d,
@@ -2096,7 +2107,7 @@ class Component extends DCLogic {
         const name = entry[0], amount = entry[1];
         const isOpen = state.expOpenMerchant === name;
         const merchantTx = isOpen
-          ? viewRecords.filter(r => r.m === name).slice().sort((a, b) => b.d.localeCompare(a.d)).map(r => ({
+          ? displayViewRecords.filter(r => r.m === name).slice().sort((a, b) => b.d.localeCompare(a.d)).map(r => ({
               date: self.formatDate(r.d) || r.d,
               amount: fmt(r.a) + ' ₪',
               card: r.card,
