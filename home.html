@@ -62,11 +62,14 @@
         או
         <div style="flex:1;height:1px;background:#E4DCCB;"></div>
       </div>
-      <input type="password" value="{{ loginInput }}" onChange="{{ onLoginInputChange }}" placeholder="סיסמה" style="width:100%;padding:13px 14px;border-radius:10px;border:1px solid #E4DCCB;font-size:15px;text-align:center;background:#FBF8F1;" />
-      <sc-if value="{{ authError }}" hint-placeholder-val="{{ false }}">
-        <p style="margin:0;font-size:13px;color:#A8492F;font-weight:600;">ההתחברות נכשלה, נסו שוב.</p>
-      </sc-if>
-      <button onClick="{{ onLoginSubmit }}" style="width:100%;background:#0B2440;color:#fff;border:none;border-radius:100px;padding:13px;font-size:14.5px;font-weight:700;cursor:pointer;">{{ loginButtonText }}</button>
+      <form onSubmit="{{ onLoginSubmit }}" style="display:flex;flex-direction:column;gap:18px;align-items:center;width:100%;">
+        <input type="text" name="username" autocomplete="username" value="kunikhome" readonly style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;" />
+        <input type="password" name="password" autocomplete="current-password" value="{{ loginInput }}" onChange="{{ onLoginInputChange }}" placeholder="סיסמה" style="width:100%;padding:13px 14px;border-radius:10px;border:1px solid #E4DCCB;font-size:15px;text-align:center;background:#FBF8F1;box-sizing:border-box;" />
+        <sc-if value="{{ authError }}" hint-placeholder-val="{{ false }}">
+          <p style="margin:0;font-size:13px;color:#A8492F;font-weight:600;">ההתחברות נכשלה, נסו שוב.</p>
+        </sc-if>
+        <button type="submit" style="width:100%;background:#0B2440;color:#fff;border:none;border-radius:100px;padding:13px;font-size:14.5px;font-weight:700;cursor:pointer;">{{ loginButtonText }}</button>
+      </form>
     </div>
   </div>
 </sc-if>
@@ -981,6 +984,17 @@ class Component extends DCLogic {
     this.loadFromSheets(storedPw, storedToken);
     this._initGoogleAuth();
     this._renderGoogleButton();
+    // Ask the browser/OS for a saved credential (e.g. from iCloud Keychain or
+    // Google Password Manager) right away — on supporting browsers this can
+    // surface a Face ID/Touch ID prompt immediately, without waiting for the
+    // user to tap the password field first. Silently does nothing where
+    // unsupported (notably most of Safari's Credential Management API).
+    if (navigator.credentials && navigator.credentials.get) {
+      const self = this;
+      navigator.credentials.get({ password: true, mediation: 'optional' })
+        .then(cred => { if (cred && cred.password) self.onLoginSubmit(null, cred.password); })
+        .catch(() => {});
+    }
     this._onVisible = () => {
       if (document.visibilityState === 'visible') this.loadFromSheets();
     };
@@ -1036,10 +1050,11 @@ class Component extends DCLogic {
     this.setState({ loginInput: value });
   }
 
-  onLoginSubmit() {
-    const pw = this.state.loginInput;
-    try { localStorage.setItem(AUTH_KEY, pw); } catch (e) {}
-    this.setState({ storedPassword: pw, authError: false });
+  onLoginSubmit(e, pwOverride) {
+    if (e && e.preventDefault) e.preventDefault();
+    const pw = pwOverride !== undefined ? pwOverride : this.state.loginInput;
+    try { localStorage.setItem(AUTH_KEY, pw); } catch (e2) {}
+    this.setState({ storedPassword: pw, loginInput: pw, authError: false });
     this.loadFromSheets(pw, undefined);
   }
 
@@ -1133,6 +1148,15 @@ class Component extends DCLogic {
           self.setState({ authed: false, authError: !!(pw || token), syncStatus: 'idle' });
           setTimeout(() => self._renderGoogleButton(), 50);
           return;
+        }
+        // Login via password succeeded — explicitly offer the credential to
+        // the browser's own password manager (Keychain / Google Password
+        // Manager) so future unlocks can be Face ID/Touch ID-gated autofill
+        // instead of retyping. No-op where the API isn't supported (notably
+        // most of Safari) — the <form>+autocomplete markup on the login
+        // fields is what matters there, independent of this call.
+        if (pw && window.PasswordCredential && navigator.credentials && navigator.credentials.store) {
+          try { navigator.credentials.store(new PasswordCredential({ id: 'kunikhome', password: pw, name: 'Kunik Home' })); } catch (e2) {}
         }
         if (!res || !res.data) { self.setState({ syncStatus: 'stale', authed: true, authError: false }); return; }
         const merged = unpackHistoryFromSync(Object.assign({}, EMPTY_DATA, res.data));
@@ -2116,7 +2140,7 @@ class Component extends DCLogic {
       loginButtonRef: self.loginButtonRef,
       loginInput: state.loginInput,
       onLoginInputChange: (e) => self.onLoginInputChange(e.target.value),
-      onLoginSubmit: () => self.onLoginSubmit(),
+      onLoginSubmit: (e) => self.onLoginSubmit(e),
       authError: state.authError,
       loginButtonText: state.syncStatus === 'syncing' ? 'בודק…' : 'כניסה',
       appTitle: this.props.appTitle ?? 'Kunik Home',
