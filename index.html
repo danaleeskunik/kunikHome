@@ -821,6 +821,13 @@ function normalizeData(data) {
       return itemChanged ? newItem : item;
     });
   });
+  // Lightweight sync-only lists that aren't a full UI table domain (like
+  // expenseFlags) aren't in DOMAINS at all — pass them through unchanged
+  // instead of silently dropping them, or they vanish on every load/save
+  // round-trip even though nothing here actually needed normalizing them.
+  Object.keys(data).forEach(k => {
+    if (!(k in next)) next[k] = data[k];
+  });
   return { data: next, changed: changed };
 }
 // Apps Script's Sheets round-trip stores every cell as a flat string, so the
@@ -1175,7 +1182,15 @@ class Component extends DCLogic {
           try { navigator.credentials.store(new PasswordCredential({ id: 'kunikhome', password: pw, name: 'Kunik Home' })); } catch (e2) {}
         }
         if (!res || !res.data) { self.setState({ syncStatus: 'stale', authed: true, authError: false }); return; }
-        const merged = unpackHistoryFromSync(Object.assign({}, EMPTY_DATA, res.data));
+        // The live Apps Script won't know about a brand-new domain key (like
+        // expenseFlags) until Dana re-pastes+redeploys google-apps-script.gs —
+        // until then res.data simply omits that key. Falling back to EMPTY_DATA
+        // for it would silently wipe out whatever was already flagged locally
+        // on every single load. Fall back to the current in-memory value instead,
+        // and only ever let a key the server actually SENT overwrite local data.
+        const serverData = Object.assign({}, res.data);
+        if (serverData.expenseFlags === undefined) serverData.expenseFlags = self.state.data.expenseFlags || [];
+        const merged = unpackHistoryFromSync(Object.assign({}, EMPTY_DATA, serverData));
         const norm = normalizeData(merged);
         const next = { syncStatus: 'synced', authed: true, authError: false };
         if (res.categories) {
