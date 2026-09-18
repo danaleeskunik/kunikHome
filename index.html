@@ -36,11 +36,30 @@
     .dc-sidebar-brand{flex:none!important;}
     .dc-sidebar-brand p{display:none;}
     .dc-sidebar-brand h1{font-size:15px!important;white-space:nowrap;}
-    .dc-sidebar nav{flex-direction:row!important;flex:1;min-width:0;overflow-x:auto;gap:4px;}
-    .dc-sidebar nav button{width:auto!important;white-space:nowrap;padding:8px 10px!important;flex:none!important;}
+    /* טאבים בנייד עוברים לסרגל קבוע בתחתית המסך (כמו אפליקציה) במקום שורה
+       דחוקה למעלה ליד הלוגו - קל יותר להגיע אליהם עם האגודל ותמיד גלוי,
+       בלי תלות בגלילה אופקית שמסתירה אפשרויות מחוץ למסך. */
+    .dc-sidebar nav{
+      position:fixed!important;bottom:0;left:0;right:0;
+      flex-direction:row!important;
+      background:#0B2440;
+      overflow-x:auto;
+      gap:2px;
+      padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+      box-shadow:0 -2px 12px rgba(0,0,0,.2);
+      z-index:20;
+    }
+    .dc-sidebar nav button{
+      flex-direction:column!important;
+      width:auto!important;min-width:56px;flex:none!important;
+      white-space:normal;text-align:center;
+      gap:3px!important;padding:7px 6px 6px!important;border-radius:12px!important;
+    }
+    .dc-sidebar nav button span{flex:none!important;font-size:10px!important;line-height:1.15!important;max-width:60px;}
+    .dc-sidebar nav button sc-if{display:none!important;}
     .dc-sidebar-actions{flex:none!important;flex-direction:row!important;margin-top:0!important;padding-top:0!important;border-top:none!important;}
     .dc-action-label{display:none;}
-    .dc-main{padding:16px 14px 40px!important;max-width:100%!important;}
+    .dc-main{padding:16px 14px calc(80px + env(safe-area-inset-bottom))!important;max-width:100%!important;}
   }
 </style>
 </helmet>
