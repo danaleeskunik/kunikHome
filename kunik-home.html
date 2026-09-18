@@ -739,7 +739,7 @@ const DOMAINS = [
     dateFields:[{key:'licenseExpiry',label:'תוקף רישיון'},{key:'insuranceExpiry',label:'תוקף ביטוח'}],
     hasTotalSummary:true, totalAmountKeys:['comprehensiveCost','mandatoryCost','licenseCost'], totalAmountDivisor:12, totalLabelText:'סה"כ הוצאה חודשית',
     computedMonthlyKeys:['comprehensiveCost','mandatoryCost','licenseCost'], computedMonthlyLabel:'עלות חודשית ממוצעת', computedMonthlyDivisor:12,
-    historyGroups:[{ dateKey:'insuranceExpiry', amountKeys:['comprehensiveCost','mandatoryCost'] }],
+    historyGroups:[{ dateKey:'insuranceExpiry', amountKeys:['comprehensiveCost','mandatoryCost'] }, { dateKey:'licenseExpiry', amountKeys:['licenseCost'] }],
     fields:[
       { key:'nickname', label:'רכב (דגם/כינוי)', type:'text', primary:true },
       { key:'comprehensiveCost', label:'עלות ביטוח מקיף', type:'currency' },
