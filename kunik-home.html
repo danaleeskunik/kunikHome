@@ -52,11 +52,11 @@
     .dc-sidebar nav button{
       flex-direction:column!important;
       width:auto!important;min-width:56px;flex:none!important;
-      white-space:normal;text-align:center;
+      white-space:normal!important;text-align:center!important;
       gap:3px!important;padding:7px 6px 6px!important;border-radius:12px!important;
     }
-    .dc-sidebar nav button span{flex:none!important;font-size:10px!important;line-height:1.15!important;max-width:60px;}
-    .dc-sidebar nav button sc-if{display:none!important;}
+    .dc-sidebar nav button span{flex:none!important;font-size:10px!important;line-height:1.15!important;max-width:60px;text-align:center!important;}
+    .dc-sidebar nav button .dc-nav-count{display:none!important;}
     .dc-sidebar-actions{flex:none!important;flex-direction:row!important;margin-top:0!important;padding-top:0!important;border-top:none!important;}
     .dc-action-label{display:none;}
     .dc-main{padding:16px 14px calc(80px + env(safe-area-inset-bottom))!important;max-width:100%!important;}
@@ -110,7 +110,7 @@
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="{{ n.iconColor }}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="{{ n.iconPath }}"></path></svg>
           <span style="flex:1;">{{ n.label }}</span>
           <sc-if value="{{ n.hasCount }}" hint-placeholder-val="{{ false }}">
-            <span style="font-size:11.5px;color:#6E8CAE;font-variant-numeric:tabular-nums;">{{ n.count }}</span>
+            <span class="dc-nav-count" style="font-size:11.5px;color:#6E8CAE;font-variant-numeric:tabular-nums;">{{ n.count }}</span>
           </sc-if>
         </button>
       </sc-for>
