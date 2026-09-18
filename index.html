@@ -2039,7 +2039,11 @@ class Component extends DCLogic {
         // since it's always a small minority of a cycle's transactions.
         const trimIdx = Math.floor(dates.length * 0.1);
         const first = shortDate(dates[trimIdx]), last = shortDate(dates[dates.length - 1]);
-        return ' (' + (first === last ? first : first + '–' + last) + ')';
+        // Wrapped in LTR-isolate marks (U+2066/U+2069) so the two dates never
+        // visually swap places inside this RTL page's bidi reordering - without
+        // this, "3.6–2.7" can render on screen as "2.7-3.6", making an entirely
+        // correct, non-overlapping range look like it double-counts a day.
+        return ' (⁦' + (first === last ? first : first + '–' + last) + '⁩)';
       };
 
       const monthAggAll = EXPENSE_MONTH_ORDER.map(mo => {
