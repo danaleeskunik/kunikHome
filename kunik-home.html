@@ -264,6 +264,9 @@
           <div style="background:#FFFDF9;border:1px solid #E4DCCB;border-radius:16px;padding:20px 21px;box-sizing:border-box;min-height:120px;">
             <p style="margin:0 0 12px;font-size:12.5px;font-weight:500;color:#6E6A5E;">ממוצע חודשי</p>
             <p style="margin:0;font-size:30px;font-weight:600;letter-spacing:-.8px;font-variant-numeric:tabular-nums;">{{ expTileAvg }}</p>
+            <sc-if value="{{ expAvgExcludesCurrent }}" hint-placeholder-val="{{ false }}">
+              <p style="margin:7px 0 0;font-size:12px;color:#8A8577;">לא כולל {{ expCurrentMoLabel }} (חלקי)</p>
+            </sc-if>
           </div>
           <div style="background:#0B2440;border:1px solid #0B2440;border-radius:16px;padding:20px 21px;box-sizing:border-box;min-height:120px;">
             <p style="margin:0 0 12px;font-size:12.5px;font-weight:500;color:#8FB0D6;">מספר עסקאות</p>
@@ -2176,8 +2179,14 @@ class Component extends DCLogic {
       const expMerchantHeading = merchantQuery ? ('תוצאות עבור "' + state.expMerchantQuery.trim() + '"') : 'בתי עסק מובילים';
       const expNoMerchantMatch = !!merchantQuery && merchantSourceEntries.length === 0;
 
-      const monthsInScope = monthFilter === 'all' ? EXPENSE_MONTH_ORDER.length : 1;
-      const avgPerMonth = monthsInScope ? agg.totalSum / monthsInScope : agg.totalSum;
+      // The current billing cycle (currentMo) is always partial - averaging it
+      // in with a full month's weight drags the average down misleadingly, so
+      // it's excluded from both the sum and the month count here, same as the
+      // monthly email report already does.
+      const avgRecords = monthFilter === 'all' ? baseRecords.filter(r => r.mo !== currentMo) : viewRecords;
+      const avgSum = monthFilter === 'all' ? avgRecords.reduce((s, r) => s + r.a, 0) : agg.totalSum;
+      const monthsInScope = monthFilter === 'all' ? (EXPENSE_MONTH_ORDER.length - 1) : 1;
+      const avgPerMonth = monthsInScope ? avgSum / monthsInScope : avgSum;
 
       expData = {
         isExpenses: true,
@@ -2199,6 +2208,8 @@ class Component extends DCLogic {
         expShowAllChip: monthFilter !== 'all',
         onExpShowAll: () => self.setExpMonth('all'),
         expTileAvg: fmt(avgPerMonth) + ' ₪ / חודש',
+        expAvgExcludesCurrent: monthFilter === 'all',
+        expCurrentMoLabel: EXPENSE_MONTH_LABEL[currentMo],
         expTileCount: String(agg.totalRecords),
         expTilePending: agg.pendingTotal ? (fmt(agg.pendingTotal) + ' ₪') : null,
         expHasPending: agg.pendingTotal > 0,
