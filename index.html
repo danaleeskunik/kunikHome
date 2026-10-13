@@ -63,6 +63,39 @@
   }
 </style>
 </helmet>
+<sc-if value="{{ isChecking }}" hint-placeholder-val="{{ false }}">
+  <div dir="rtl" style="min-height:100vh;width:100%;background:#0B2440;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+    <div style="display:inline-flex;align-items:flex-end;gap:4px;height:30px;">
+      <div style="width:9px;height:14px;border-radius:3px;background:#4E7FB5;"></div>
+      <div style="width:9px;height:22px;border-radius:3px;background:#1B6FD1;"></div>
+      <div style="width:9px;height:30px;border-radius:3px;background:#F3EFE6;"></div>
+    </div>
+    <p style="margin:0;font-size:13px;color:#8FB0D6;">טוען…</p>
+  </div>
+</sc-if>
+<sc-if value="{{ isLocked }}" hint-placeholder-val="{{ false }}">
+  <div dir="rtl" style="min-height:100vh;width:100%;background:#0B2440;display:flex;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#FFFDF9;border-radius:20px;padding:36px 32px;max-width:360px;width:100%;box-shadow:0 14px 40px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:18px;align-items:center;text-align:center;">
+      <div style="display:inline-flex;align-items:flex-end;gap:4px;height:30px;">
+        <div style="width:9px;height:14px;border-radius:3px;background:#8FB0D6;"></div>
+        <div style="width:9px;height:22px;border-radius:3px;background:#1B6FD1;"></div>
+        <div style="width:9px;height:30px;border-radius:3px;background:#0B2440;"></div>
+      </div>
+      <div>
+        <h1 style="margin:0 0 6px;font-size:19px;font-weight:700;color:#22261F;">Kunik Home</h1>
+        <p style="margin:0;font-size:13.5px;color:#6E6A5E;">האפליקציה נעולה</p>
+      </div>
+      <button type="button" onClick="{{ onUnlockFaceId }}" style="width:100%;display:flex;flex-direction:column;align-items:center;gap:10px;background:#F3EFE6;border:1px solid #E4DCCB;border-radius:16px;padding:22px 14px;cursor:pointer;">
+        <svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#0B2440" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"></path><path d="M9 9.5v1.5M15 9.5v1.5M12 9.5v3.5h-1M9 15.5c1.8 1.5 4.2 1.5 6 0"></path></svg>
+        <span style="font-size:14.5px;font-weight:700;color:#0B2440;">פתחו עם Face ID</span>
+      </button>
+      <sc-if value="{{ hasLockError }}" hint-placeholder-val="{{ false }}">
+        <p style="margin:0;font-size:13px;color:#A8492F;font-weight:600;">{{ lockError }}</p>
+      </sc-if>
+      <button type="button" onClick="{{ onLockUseOther }}" style="border:none;background:transparent;color:#6E6A5E;font-size:12.5px;cursor:pointer;text-decoration:underline;">התחברות בדרך אחרת</button>
+    </div>
+  </div>
+</sc-if>
 <sc-if value="{{ notAuthed }}" hint-placeholder-val="{{ false }}">
   <div dir="rtl" style="min-height:100vh;width:100%;background:#0B2440;display:flex;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#FFFDF9;border-radius:20px;padding:36px 32px;max-width:360px;width:100%;box-shadow:0 14px 40px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:18px;align-items:center;text-align:center;">
@@ -135,6 +168,17 @@
   </aside>
 
   <main class="dc-main" style="flex:1;min-width:0;padding:30px 46px 70px;max-width:1600px;">
+    <sc-if value="{{ showPasskeyOffer }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:#FFFDF9;border:1px solid #E4DCCB;border-radius:14px;padding:13px 16px;margin-bottom:18px;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1B6FD1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"></path><path d="M9 9.5v1.5M15 9.5v1.5M12 9.5v3.5h-1M9 15.5c1.8 1.5 4.2 1.5 6 0"></path></svg>
+        <div style="flex:1;min-width:180px;">
+          <p style="margin:0 0 2px;font-size:13.5px;font-weight:600;color:#22261F;">כניסה מהירה עם Face ID</p>
+          <p style="margin:0;font-size:12px;color:#6E6A5E;">במכשיר הזה לא צריך להתחבר שוב - רק לאמת פנים כדי לפתוח.</p>
+        </div>
+        <button type="button" onClick="{{ onEnablePasskey }}" style="border:none;background:#0B2440;color:#fff;border-radius:100px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;">{{ passkeyEnableLabel }}</button>
+        <button type="button" onClick="{{ onDismissPasskey }}" style="border:none;background:transparent;color:#6E6A5E;font-size:12.5px;cursor:pointer;">לא עכשיו</button>
+      </div>
+    </sc-if>
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:26px;">
       <div style="position:relative;flex:1;max-width:420px;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A8577" stroke-width="1.8" stroke-linecap="round" style="position:absolute;top:12px;right:14px;"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
@@ -813,6 +857,24 @@ const STORAGE_FILES_KEY = 'finhub_files_v1';
 const STORAGE_COLWIDTHS_KEY = 'finhub_colwidths_v1';
 const STORAGE_COLLAPSED_KEY = 'finhub_collapsed_v1';
 const AUTH_KEY = 'finhub_auth_v1';
+const DEVICE_KEY = 'finhub_device_v1';
+const PASSKEY_KEY = 'finhub_passkey_v1';
+const PASSKEY_DISMISSED_KEY = 'finhub_passkey_dismissed_v1';
+const LOCK_AFTER_MS = 5 * 60 * 1000;
+function bytesToB64url(buf) {
+  const bin = String.fromCharCode.apply(null, Array.from(new Uint8Array(buf)));
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64urlToBytes(str) {
+  const b64 = str.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((str.length + 3) % 4);
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+function webauthnSupported() {
+  return !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.create && navigator.credentials.get);
+}
 const GOOGLE_AUTH_KEY = 'finhub_google_auth_v1';
 const GOOGLE_CLIENT_ID = '547196446091-mi9ngcdqdeucjk1qjo3ddnr8n5kluv3l.apps.googleusercontent.com';
 const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycby4vjW_P4KzHwKnuLIwFSO3B7n9oofY9A-5UAJbpPOLlAELvmEpSLfN9bKGuW7g2nv0-w/exec';
@@ -972,6 +1034,13 @@ class Component extends DCLogic {
     loginInput: '',
     googleIdToken: '',
     googleEmail: '',
+    deviceToken: '',
+    passkeyId: '',
+    locked: false,
+    checking: false,
+    lockError: '',
+    passkeyOffer: false,
+    passkeyBusy: false,
     expHideTourism: false,
     expMonth: 'all',
     expOpenCategory: null,
@@ -989,10 +1058,26 @@ class Component extends DCLogic {
     try { storedPw = localStorage.getItem(AUTH_KEY) || ''; } catch (e) {}
     let storedToken = '';
     try { storedToken = localStorage.getItem(GOOGLE_AUTH_KEY) || ''; } catch (e) {}
-    const decoded = storedToken ? decodeJwtPayload(storedToken) : null;
+    let decoded = storedToken ? decodeJwtPayload(storedToken) : null;
+    // Google ID tokens live ~1 hour. An expired one is useless and used to make
+    // the app flash its data and then bounce to the login screen on every return.
+    if (decoded && decoded.exp && decoded.exp * 1000 < Date.now()) {
+      storedToken = ''; decoded = null;
+      try { localStorage.removeItem(GOOGLE_AUTH_KEY); } catch (e) {}
+    }
+    let deviceTok = '', passkeyId = '';
+    try { deviceTok = localStorage.getItem(DEVICE_KEY) || ''; } catch (e) {}
+    try { passkeyId = localStorage.getItem(PASSKEY_KEY) || ''; } catch (e) {}
+    const lockNow = !!(deviceTok && passkeyId && webauthnSupported());
+    const hasCreds = !!(storedPw || storedToken || deviceTok);
     this.setState({
       storedPassword: storedPw, loginInput: storedPw,
       googleIdToken: storedToken, googleEmail: (decoded && decoded.email) || '',
+      deviceToken: deviceTok, passkeyId: passkeyId,
+      locked: lockNow,
+      // No stored credential at all: don't flash the (empty) app before the
+      // server says whether a login is needed - show a brief splash instead.
+      checking: !lockNow && !hasCreds && !!SHEETS_WEBAPP_URL && this.props.sheetsSync !== false,
     });
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -1026,22 +1111,43 @@ class Component extends DCLogic {
         if (parsedCollapsed && typeof parsedCollapsed === 'object') this.setState({ collapsedGroups: parsedCollapsed });
       }
     } catch (e) {}
-    this.loadFromSheets(storedPw, storedToken);
     this._initGoogleAuth();
     this._renderGoogleButton();
-    // Ask the browser/OS for a saved credential (e.g. from iCloud Keychain or
-    // Google Password Manager) right away — on supporting browsers this can
-    // surface a Face ID/Touch ID prompt immediately, without waiting for the
-    // user to tap the password field first. Silently does nothing where
-    // unsupported (notably most of Safari's Credential Management API).
-    if (navigator.credentials && navigator.credentials.get) {
-      const self = this;
-      navigator.credentials.get({ password: true, mediation: 'optional' })
-        .then(cred => { if (cred && cred.password) self.onLoginSubmit(null, cred.password); })
-        .catch(() => {});
+    if (lockNow) {
+      // Locked behind Face ID: nothing is fetched or shown until it succeeds.
+      // Try automatically; on iOS this may need a tap, so the lock screen also
+      // has a button.
+      setTimeout(() => this.unlockWithFaceId(true), 300);
+    } else {
+      this.loadFromSheets(storedPw, storedToken);
+      // Ask the browser/OS for a saved credential (e.g. from iCloud Keychain or
+      // Google Password Manager) right away — on supporting browsers this can
+      // surface a Face ID/Touch ID prompt immediately, without waiting for the
+      // user to tap the password field first. Silently does nothing where
+      // unsupported (notably most of Safari's Credential Management API).
+      if (!deviceTok && navigator.credentials && navigator.credentials.get) {
+        const self = this;
+        navigator.credentials.get({ password: true, mediation: 'optional' })
+          .then(cred => { if (cred && cred.password) self.onLoginSubmit(null, cred.password); })
+          .catch(() => {});
+      }
     }
     this._onVisible = () => {
-      if (document.visibilityState === 'visible') this.loadFromSheets();
+      if (document.visibilityState === 'hidden') {
+        if (!this._hiddenAt) this._hiddenAt = Date.now();
+        return;
+      }
+      if (document.visibilityState !== 'visible') return;
+      // Face ID app-lock: coming back after a while re-locks the app.
+      if (this.state.passkeyId && this._hiddenAt && Date.now() - this._hiddenAt > LOCK_AFTER_MS && !this.state.locked) {
+        this._hiddenAt = null;
+        this.setState({ locked: true, lockError: '' });
+        setTimeout(() => this.unlockWithFaceId(true), 200);
+        return;
+      }
+      this._hiddenAt = null;
+      if (this.state.locked) return;
+      this.loadFromSheets();
     };
     document.addEventListener('visibilitychange', this._onVisible);
     window.addEventListener('pageshow', this._onVisible);
@@ -1103,6 +1209,117 @@ class Component extends DCLogic {
     this.loadFromSheets(pw, undefined);
   }
 
+  // ---------- "known device" + Face ID app lock ----------
+  // After one normal login (Google/password) the server hands this device a
+  // long-lived signed token, so the 1-hour Google token expiry no longer
+  // forces a re-login. Face ID (a WebAuthn platform passkey) is a local lock on
+  // top: the OS verifies the face, and the app stays closed until it does.
+  _authQuery(pw, token) {
+    return 'password=' + encodeURIComponent(pw || '')
+      + '&idToken=' + encodeURIComponent(token || '')
+      + '&deviceToken=' + encodeURIComponent(this.state.deviceToken || '');
+  }
+
+  _storeDeviceToken(tok) {
+    if (!tok || tok === this.state.deviceToken) return;
+    const firstTime = !this.state.deviceToken;
+    try { localStorage.setItem(DEVICE_KEY, tok); } catch (e) {}
+    this.setState({ deviceToken: tok });
+    if (firstTime) {
+      // The device token replaces the stored password / short-lived Google token,
+      // so the plaintext password no longer has to sit in localStorage.
+      try { localStorage.removeItem(AUTH_KEY); localStorage.removeItem(GOOGLE_AUTH_KEY); } catch (e) {}
+      this.setState({ storedPassword: '', googleIdToken: '' });
+    }
+  }
+
+  _dropDevice() {
+    try { localStorage.removeItem(DEVICE_KEY); localStorage.removeItem(PASSKEY_KEY); } catch (e) {}
+    this.setState({ deviceToken: '', passkeyId: '', locked: false, passkeyOffer: false });
+  }
+
+  _issueDeviceToken(pw, token) {
+    if (!SHEETS_WEBAPP_URL || this._issuingDevice) return;
+    this._issuingDevice = true;
+    const self = this;
+    const url = SHEETS_WEBAPP_URL + (SHEETS_WEBAPP_URL.indexOf('?') === -1 ? '?' : '&')
+      + 'action=issueDevice&' + this._authQuery(pw, token);
+    fetch(url).then(r => r.json()).then(res => {
+      self._issuingDevice = false;
+      if (res && res.deviceToken) { self._storeDeviceToken(res.deviceToken); self._maybeOfferPasskey(); }
+    }).catch(() => { self._issuingDevice = false; });
+  }
+
+  _maybeOfferPasskey() {
+    if (this.state.passkeyId || !webauthnSupported()) return;
+    let dismissed = false;
+    try { dismissed = localStorage.getItem(PASSKEY_DISMISSED_KEY) === '1'; } catch (e) {}
+    if (dismissed) return;
+    const self = this;
+    Promise.resolve(window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable
+      ? window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable() : false)
+      .then(ok => { if (ok) self.setState({ passkeyOffer: true }); })
+      .catch(() => {});
+  }
+
+  dismissPasskeyOffer() {
+    try { localStorage.setItem(PASSKEY_DISMISSED_KEY, '1'); } catch (e) {}
+    this.setState({ passkeyOffer: false });
+  }
+
+  enablePasskey() {
+    if (this.state.passkeyBusy) return;
+    this.setState({ passkeyBusy: true });
+    const self = this;
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    navigator.credentials.create({
+      publicKey: {
+        challenge: challenge,
+        rp: { name: 'Kunik Home', id: location.hostname },
+        user: { id: crypto.getRandomValues(new Uint8Array(16)), name: self.state.googleEmail || 'kunikhome', displayName: 'Kunik Home' },
+        pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+        authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'preferred' },
+        timeout: 60000,
+        attestation: 'none',
+      },
+    }).then(cred => {
+      const id = bytesToB64url(cred.rawId);
+      try { localStorage.setItem(PASSKEY_KEY, id); } catch (e) {}
+      self.setState({ passkeyId: id, passkeyOffer: false, passkeyBusy: false });
+    }).catch(() => { self.setState({ passkeyBusy: false }); });
+  }
+
+  unlockWithFaceId(isAuto) {
+    if (this._unlocking || !this.state.passkeyId) return;
+    this._unlocking = true;
+    this.setState({ lockError: '' });
+    const self = this;
+    navigator.credentials.get({
+      publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        rpId: location.hostname,
+        allowCredentials: [{ type: 'public-key', id: b64urlToBytes(this.state.passkeyId) }],
+        userVerification: 'required',
+        timeout: 60000,
+      },
+    }).then(() => {
+      self._unlocking = false;
+      self.setState({ locked: false, lockError: '' });
+      self.loadFromSheets();
+    }).catch(() => {
+      self._unlocking = false;
+      // An automatic attempt can be refused (iOS wants a tap) - stay quiet and
+      // let the button do it; only a deliberate attempt shows an error.
+      if (!isAuto) self.setState({ lockError: 'לא הצלחנו לאמת. נסו שוב.' });
+    });
+  }
+
+  lockUseOther() {
+    this._dropDevice();
+    this.setState({ authed: false });
+    setTimeout(() => this._renderGoogleButton(), 50);
+  }
+
   // ---------- storage ----------
   persist(data) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e) {}
@@ -1155,9 +1372,7 @@ class Component extends DCLogic {
     const self = this;
     this.setState({ syncStatus: 'syncing' });
     const payload = JSON.stringify({ data: packHistoryForSync(data), categories: this.state.categories });
-    const url = SHEETS_WEBAPP_URL
-      + '?password=' + encodeURIComponent(this.state.storedPassword || '')
-      + '&idToken=' + encodeURIComponent(this.state.googleIdToken || '');
+    const url = SHEETS_WEBAPP_URL + '?' + this._authQuery(this.state.storedPassword, this.state.googleIdToken);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 15000);
     fetch(url, { method: 'POST', body: payload, signal: controller.signal })
@@ -1165,6 +1380,7 @@ class Component extends DCLogic {
       .then(res => {
         clearTimeout(timer);
         if (res && res.status === 'unauthorized') {
+          if (self.state.deviceToken) self._dropDevice();
           self.setState({ authed: false, syncStatus: 'idle' });
           setTimeout(() => self._renderGoogleButton(), 50);
         } else {
@@ -1181,8 +1397,8 @@ class Component extends DCLogic {
     const token = tokenOverride !== undefined ? tokenOverride : this.state.googleIdToken;
     this.setState({ syncStatus: 'syncing' });
     const url = SHEETS_WEBAPP_URL + (SHEETS_WEBAPP_URL.indexOf('?') === -1 ? '?' : '&')
-      + 'password=' + encodeURIComponent(pw || '')
-      + '&idToken=' + encodeURIComponent(token || '');
+      + this._authQuery(pw, token);
+    const usedDevice = !!this.state.deviceToken;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 12000);
     fetch(url, { signal: controller.signal })
@@ -1190,10 +1406,16 @@ class Component extends DCLogic {
       .then(res => {
         clearTimeout(timer);
         if (res && res.status === 'unauthorized') {
-          self.setState({ authed: false, authError: !!(pw || token), syncStatus: 'idle' });
+          // A revoked/expired device token is dropped so the next screen is a
+          // clean login rather than a loop of failed unlocks.
+          if (usedDevice) self._dropDevice();
+          self.setState({ authed: false, checking: false, authError: !!(pw || token) && !usedDevice, syncStatus: 'idle' });
           setTimeout(() => self._renderGoogleButton(), 50);
           return;
         }
+        if (res && res.deviceToken) self._storeDeviceToken(res.deviceToken);
+        else if (!usedDevice && !self.state.deviceToken && (pw || token)) self._issueDeviceToken(pw, token);
+        else if (self.state.deviceToken) self._maybeOfferPasskey();
         // Login via password succeeded — explicitly offer the credential to
         // the browser's own password manager (Keychain / Google Password
         // Manager) so future unlocks can be Face ID/Touch ID-gated autofill
@@ -1203,7 +1425,7 @@ class Component extends DCLogic {
         if (pw && window.PasswordCredential && navigator.credentials && navigator.credentials.store) {
           try { navigator.credentials.store(new PasswordCredential({ id: 'kunikhome', password: pw, name: 'Kunik Home' })); } catch (e2) {}
         }
-        if (!res || !res.data) { self.setState({ syncStatus: 'stale', authed: true, authError: false }); return; }
+        if (!res || !res.data) { self.setState({ syncStatus: 'stale', authed: true, checking: false, authError: false }); return; }
         // The live Apps Script won't know about a brand-new domain key (like
         // expenseFlags) until Dana re-pastes+redeploys google-apps-script.gs —
         // until then res.data simply omits that key. Falling back to EMPTY_DATA
@@ -1214,7 +1436,7 @@ class Component extends DCLogic {
         if (serverData.expenseFlags === undefined) serverData.expenseFlags = self.state.data.expenseFlags || [];
         const merged = unpackHistoryFromSync(Object.assign({}, EMPTY_DATA, serverData));
         const norm = normalizeData(merged);
-        const next = { syncStatus: 'synced', authed: true, authError: false };
+        const next = { syncStatus: 'synced', authed: true, checking: false, authError: false };
         if (res.categories) {
           next.categories = mergeCategories(res.categories);
           try { localStorage.setItem(STORAGE_CATS_KEY, JSON.stringify(res.categories)); } catch (e) {}
@@ -1227,7 +1449,7 @@ class Component extends DCLogic {
           self.setState({ data: norm.data });
         }
       })
-      .catch(() => { clearTimeout(timer); self.setState({ syncStatus: 'error' }); });
+      .catch(() => { clearTimeout(timer); self.setState({ syncStatus: 'error', checking: false }); });
   }
 
   // ---------- helpers ----------
@@ -2243,7 +2465,17 @@ class Component extends DCLogic {
     const sync = syncMap[state.syncStatus] || syncMap.idle;
 
     return Object.assign({
-      notAuthed: !state.authed, authed: state.authed,
+      notAuthed: !state.authed && !state.locked && !state.checking,
+      authed: state.authed && !state.locked && !state.checking,
+      isLocked: state.locked, isChecking: state.checking && !state.locked,
+      lockError: state.lockError, hasLockError: !!state.lockError,
+      onUnlockFaceId: () => self.unlockWithFaceId(false),
+      onLockUseOther: () => self.lockUseOther(),
+      showPasskeyOffer: state.passkeyOffer && !state.passkeyId,
+      passkeyBusy: state.passkeyBusy,
+      passkeyEnableLabel: state.passkeyBusy ? 'מפעיל…' : 'הפעלה',
+      onEnablePasskey: () => self.enablePasskey(),
+      onDismissPasskey: () => self.dismissPasskeyOffer(),
       loginButtonRef: self.loginButtonRef,
       loginInput: state.loginInput,
       onLoginInputChange: (e) => self.onLoginInputChange(e.target.value),
