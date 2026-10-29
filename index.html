@@ -2253,22 +2253,16 @@ class Component extends DCLogic {
         const p = String(iso).split('-');
         return p.length === 3 ? (parseInt(p[2], 10) + '.' + parseInt(p[1], 10)) : iso;
       };
-      const monthRangeLabel = (recs) => {
-        if (!recs.length) return '';
-        const dates = recs.map(r => r.d).sort();
-        // Installment purchases and early-billed subscriptions keep their
-        // original charge date across every cycle they're split/repeated over,
-        // which can drag the earliest date far outside the cycle's real
-        // ~30-day window. Trim the earliest 10% instead of using a fixed
-        // day-cutoff — robust regardless of how far back an outlier sits,
-        // since it's always a small minority of a cycle's transactions.
-        const trimIdx = Math.floor(dates.length * 0.1);
-        const first = shortDate(dates[trimIdx]), last = shortDate(dates[dates.length - 1]);
-        // Wrapped in LTR-isolate marks (U+2066/U+2069) so the two dates never
-        // visually swap places inside this RTL page's bidi reordering - without
-        // this, "3.6–2.7" can render on screen as "2.7-3.6", making an entirely
-        // correct, non-overlapping range look like it double-counts a day.
-        return ' (⁦' + (first === last ? first : first + '–' + last) + '⁩)';
+      // Billing cycle rule: a month's statement covers purchases from the 2nd of
+      // the previous month through the 1st of that month (e.g. August = 2.7-1.8).
+      // The label shows that fixed window rather than min/max of the actual dates,
+      // which were skewed by installments, late-billed foreign charges and cards
+      // with slightly different cutoffs. LTR-isolate marks (U+2066/U+2069) keep
+      // the two dates in order inside this RTL page.
+      const monthRangeLabel = (mo) => {
+        const m = parseInt(mo.slice(0, 2), 10);
+        const prev = m === 1 ? 12 : m - 1;
+        return ' (\u2066' + '2.' + prev + '\u2013' + '1.' + m + '\u2069)';
       };
 
       // The last bucket in EXPENSE_MONTH_ORDER is always the billing cycle
@@ -2280,7 +2274,7 @@ class Component extends DCLogic {
 
       const monthAggAll = EXPENSE_MONTH_ORDER.map(mo => {
         const recs = EXPENSE_RECORDS.filter(passesExpFilters).filter(r => r.mo === mo);
-        return { mo: mo, sum: recs.reduce((s, r) => s + r.a, 0), rangeLabel: monthRangeLabel(recs) };
+        return { mo: mo, sum: recs.reduce((s, r) => s + r.a, 0), rangeLabel: monthRangeLabel(mo) };
       });
       const maxMonthSum = Math.max.apply(null, monthAggAll.map(m => m.sum).concat([1]));
 
@@ -2330,7 +2324,7 @@ class Component extends DCLogic {
         // otherwise it would just repeat the single month already selected.
         const catMonthAgg = (isOpen && monthFilter === 'all') ? EXPENSE_MONTH_ORDER.map(mo => {
           const recs = baseRecords.filter(r => r.c === name && r.mo === mo);
-          return { mo: mo, sum: recs.reduce((s, r) => s + r.a, 0), rangeLabel: monthRangeLabel(recs) };
+          return { mo: mo, sum: recs.reduce((s, r) => s + r.a, 0), rangeLabel: monthRangeLabel(mo) };
         }) : [];
         const maxCatMonth = Math.max.apply(null, catMonthAgg.map(m => m.sum).concat([1]));
         const catMonthBars = catMonthAgg.map(m => {
