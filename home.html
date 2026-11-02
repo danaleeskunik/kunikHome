@@ -857,6 +857,7 @@ const STORAGE_FILES_KEY = 'finhub_files_v1';
 const STORAGE_COLWIDTHS_KEY = 'finhub_colwidths_v1';
 const STORAGE_COLLAPSED_KEY = 'finhub_collapsed_v1';
 const AUTH_KEY = 'finhub_auth_v1';
+const DIRTY_KEY = 'finhub_dirty_v1';
 const DEVICE_KEY = 'finhub_device_v1';
 const PASSKEY_KEY = 'finhub_passkey_v1';
 const PASSKEY_DISMISSED_KEY = 'finhub_passkey_dismissed_v1';
@@ -1323,8 +1324,27 @@ class Component extends DCLogic {
   // ---------- storage ----------
   persist(data) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e) {}
+    // Mark local data as "not yet confirmed saved to the sheet". A load from the
+    // sheet must never overwrite it until a save succeeds - otherwise a failed save
+    // (server busy / lock timeout) silently loses the edit on the next refresh.
+    try { localStorage.setItem(DIRTY_KEY, String(Date.now())); } catch (e) {}
+    this._editSeq = (this._editSeq || 0) + 1;
     this.setState({ data: data });
     this.syncToSheets(data);
+  }
+
+  _isDirty() {
+    try { return !!localStorage.getItem(DIRTY_KEY); } catch (e) { return false; }
+  }
+
+  _scheduleRetry() {
+    if (this._retryTimer || !this._isDirty()) return;
+    this._retryAttempts = (this._retryAttempts || 0) + 1;
+    const delay = Math.min(60000, 5000 * this._retryAttempts);
+    this._retryTimer = setTimeout(() => {
+      this._retryTimer = null;
+      if (this._isDirty() && !this.state.locked) this.syncToSheets(this.state.data);
+    }, delay);
   }
 
   persistFiles(files) {
@@ -1371,6 +1391,7 @@ class Component extends DCLogic {
     if (!SHEETS_WEBAPP_URL || this.props.sheetsSync === false) return;
     const self = this;
     this.setState({ syncStatus: 'syncing' });
+    const seqAtSend = this._editSeq || 0;
     const payload = JSON.stringify({ data: packHistoryForSync(data), categories: this.state.categories });
     const url = SHEETS_WEBAPP_URL + '?' + this._authQuery(this.state.storedPassword, this.state.googleIdToken);
     const controller = new AbortController();
@@ -1383,11 +1404,17 @@ class Component extends DCLogic {
           if (self.state.deviceToken) self._dropDevice();
           self.setState({ authed: false, syncStatus: 'idle' });
           setTimeout(() => self._renderGoogleButton(), 50);
+        } else if (res && res.status === 'ok') {
+          // Only clear the flag if nothing newer was edited while this save was in flight.
+          if ((self._editSeq || 0) === seqAtSend) { try { localStorage.removeItem(DIRTY_KEY); } catch (e) {} }
+          self._retryAttempts = 0;
+          self.setState({ syncStatus: 'synced' });
         } else {
-          self.setState({ syncStatus: (res && res.status === 'ok') ? 'synced' : 'error' });
+          self.setState({ syncStatus: 'error' });
+          self._scheduleRetry();
         }
       })
-      .catch(() => { clearTimeout(timer); self.setState({ syncStatus: 'error' }); });
+      .catch(() => { clearTimeout(timer); self.setState({ syncStatus: 'error' }); self._scheduleRetry(); });
   }
 
   loadFromSheets(passwordOverride, tokenOverride) {
@@ -1432,6 +1459,13 @@ class Component extends DCLogic {
         // for it would silently wipe out whatever was already flagged locally
         // on every single load. Fall back to the current in-memory value instead,
         // and only ever let a key the server actually SENT overwrite local data.
+        if (self._isDirty()) {
+          // Local edits that never reached the sheet: keep them and push them again
+          // instead of replacing them with the (older) sheet contents.
+          self.setState({ syncStatus: 'syncing', authed: true, checking: false, authError: false });
+          self.syncToSheets(self.state.data);
+          return;
+        }
         const serverData = Object.assign({}, res.data);
         if (serverData.expenseFlags === undefined) serverData.expenseFlags = self.state.data.expenseFlags || [];
         const merged = unpackHistoryFromSync(Object.assign({}, EMPTY_DATA, serverData));
