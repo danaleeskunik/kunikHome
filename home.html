@@ -822,10 +822,12 @@ const DOMAINS = [
     ]},
   { key:'income', label:'הכנסות', kicker:'מקורות ותדירות', color:'#2F5D45', bg:'#E8EFE7',
     iconPath:'M3 16l6-6 4 4 8-8M15 6h6v6',
-    dateKey:null, waKey:null,
+    dateKey:null, waKey:null, groupBy:'category',
     hasMonthlySummary:true, summaryDateKey:'date', summaryAmountKey:'amount',
     fields:[
       { key:'source', label:'מקור ההכנסה', type:'text', primary:true },
+      { key:'category', label:'סוג הכנסה', type:'select' },
+      { key:'channel', label:'דרך מי', type:'select' },
       { key:'amount', label:'סכום', type:'currency' },
       { key:'frequency', label:'תדירות', type:'text' },
       { key:'date', label:'תאריך אחרון שהתקבל', type:'date' },
@@ -966,8 +968,12 @@ function defaultCategories() {
     health: { category: [] },
     savings: { category: [] },
     contacts: { role: DEFAULT_CONTACT_ROLES.slice(), category: [] },
+    income: { category: ['משכורת', 'טיולים (Pack & Board)', 'אחר'], channel: ['יסמין', 'גדי', 'ישיר'] },
   };
 }
+// Agreed price per finished trip app, by who brought the client. Prefilled into the
+// amount when a new income record gets that channel (only if the amount is still empty).
+const INCOME_CHANNEL_PRICES = { 'יסמין': '300' };
 function mergeCategories(parsed) {
   const defaults = defaultCategories();
   const merged = {};
@@ -1670,7 +1676,15 @@ class Component extends DCLogic {
 
   closeForm() { this.setState({ formOpen: false, editingSection: null, editingId: null, formValues: {}, formFiles: [], datePartDrafts: {} }); }
 
-  updateField(key, value) { this.setState(s => ({ formValues: Object.assign({}, s.formValues, { [key]: value }) })); }
+  updateField(key, value) {
+    this.setState(s => {
+      const next = Object.assign({}, s.formValues, { [key]: value });
+      if (s.editingSection === 'income' && key === 'channel' && INCOME_CHANNEL_PRICES[value] && !String(next.amount || '').trim()) {
+        next.amount = INCOME_CHANNEL_PRICES[value];
+      }
+      return { formValues: next };
+    });
+  }
 
   splitDateParts(iso) {
     const p = String(iso || '').split('-');
