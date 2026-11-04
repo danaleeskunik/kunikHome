@@ -26,6 +26,11 @@
   a{color:#1B6FD1;text-decoration:none}
   a:hover{color:#14539c}
   button{font-family:inherit}
+  /* Every dropdown: native arrow replaced by a chevron set well in from the edge. */
+  select{-webkit-appearance:none!important;appearance:none!important;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%236E6A5E' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")!important;
+    background-repeat:no-repeat!important;background-position:left 16px center!important;background-size:12px 8px!important;
+    padding-left:40px!important;cursor:pointer;}
   input,textarea,select{font-family:inherit}
   ::placeholder{color:#A8A293}
   .dc-col-resize{position:absolute;top:0;bottom:0;left:-4px;width:8px;cursor:col-resize;z-index:2;touch-action:none;}
@@ -968,7 +973,7 @@ function defaultCategories() {
     health: { category: [] },
     savings: { category: [] },
     contacts: { role: DEFAULT_CONTACT_ROLES.slice(), category: [] },
-    income: { category: ['משכורת', 'טיולים (Pack & Board)', 'אחר'], channel: ['יסמין', 'גדי', 'ישיר'] },
+    income: { category: ['משכורת', 'טיולים (Pack & Board)', 'אחר'], channel: ['יסמין', 'גידי', 'ישיר'] },
   };
 }
 // Agreed price per finished trip app, by who brought the client. Prefilled into the
@@ -984,6 +989,9 @@ function mergeCategories(parsed) {
     Object.keys(parsed).forEach(domainKey => {
       if (!merged[domainKey]) merged[domainKey] = parsed[domainKey];
     });
+  }
+  if (merged.income && Array.isArray(merged.income.channel)) {
+    merged.income.channel = merged.income.channel.map(c => (c === 'גדי' ? 'גידי' : c));
   }
   return merged;
 }
@@ -2225,7 +2233,9 @@ class Component extends DCLogic {
         const isSelect = f.type === 'select' || isRecurrence;
         const dateParts = self.currentDateParts(f.key);
         let options = [];
-        if (f.type === 'select') options = ((state.categories[d.key] || {})[f.key] || []).slice();
+        // A leading blank option, so an untouched dropdown shows (and saves) "nothing chosen"
+        // instead of silently displaying its first option while the record stores an empty value.
+        if (f.type === 'select') options = [''].concat(((state.categories[d.key] || {})[f.key] || []).slice());
         if (isRecurrence) options = RECURRENCES.map(r => r.label);
         if (isContact) {
           const current = state.formValues[f.key];
