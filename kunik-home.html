@@ -484,6 +484,28 @@
           </div>
         </div>
 
+        <sc-if value="{{ activeDomain.hasPriceList }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:20px;background:#FFFDF9;border:1px solid #E4DCCB;border-radius:16px;padding:16px 20px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;">
+              <div>
+                <p style="margin:0;font-size:14px;font-weight:700;color:#22261F;">מחירון לקוחות</p>
+                <p style="margin:2px 0 0;font-size:12px;color:#8A8577;">כמה כל לקוח משלם לטיול. הסכום מתמלא לבד כשבוחרים אותו ב"דרך מי".</p>
+              </div>
+              <button onClick="{{ activeDomain.onAddPriceClient }}" type="button" style="flex:none;border:1px solid #E4DCCB;background:#FBF8F1;color:#22261F;border-radius:100px;padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer;">+ לקוח</button>
+            </div>
+            <sc-for list="{{ activeDomain.priceRows }}" as="pr" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid #EFE9DC;">
+                <span style="flex:1;font-size:13.5px;font-weight:600;color:#22261F;">{{ pr.name }}</span>
+                <span style="font-size:13.5px;color:#2F5D45;font-weight:600;font-variant-numeric:tabular-nums;">{{ pr.priceLabel }}</span>
+                <button onClick="{{ pr.onEdit }}" type="button" title="עריכת מחיר" style="border:1px solid #E4DCCB;background:#FBF8F1;border-radius:8px;width:30px;height:30px;cursor:pointer;color:#4E4A41;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4"></path></svg>
+                </button>
+                <button onClick="{{ pr.onRemove }}" type="button" title="הסרה מהמחירון" style="border:1px solid #E4DCCB;background:#FBF8F1;border-radius:8px;width:30px;height:30px;cursor:pointer;color:#6E6A5E;font-size:15px;line-height:1;">×</button>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
         <sc-for list="{{ activeDomain.groups }}" as="grp" hint-placeholder-count="1">
           <div style="margin-top:20px;background:#FFFDF9;border:1px solid #E4DCCB;border-radius:16px;overflow:hidden;">
             <sc-if value="{{ grp.hasHeader }}" hint-placeholder-val="{{ false }}">
@@ -973,12 +995,10 @@ function defaultCategories() {
     health: { category: [] },
     savings: { category: [] },
     contacts: { role: DEFAULT_CONTACT_ROLES.slice(), category: [] },
-    income: { category: ['משכורת', 'טיולים (Pack & Board)', 'אחר'], channel: ['יסמין', 'גידי', 'ישיר'] },
+    income: { category: ['משכורת', 'טיולים (Pack & Board)', 'אחר'], channel: ['יסמין', 'גידי', 'ישיר'], prices: { 'יסמין': '300', 'גידי': '200' } },
   };
 }
-// Agreed price per finished trip app, by who brought the client. Prefilled into the
-// amount when a new income record gets that channel (only if the amount is still empty).
-const INCOME_CHANNEL_PRICES = { 'יסמין': '300' };
+
 function mergeCategories(parsed) {
   const defaults = defaultCategories();
   const merged = {};
@@ -1687,8 +1707,11 @@ class Component extends DCLogic {
   updateField(key, value) {
     this.setState(s => {
       const next = Object.assign({}, s.formValues, { [key]: value });
-      if (s.editingSection === 'income' && key === 'channel' && INCOME_CHANNEL_PRICES[value] && !String(next.amount || '').trim()) {
-        next.amount = INCOME_CHANNEL_PRICES[value];
+      // The agreed per-trip price of this client (price list on the income tab) is
+      // prefilled into the amount - only while the amount is still empty.
+      const price = ((s.categories.income || {}).prices || {})[value];
+      if (s.editingSection === 'income' && key === 'channel' && price && !String(next.amount || '').trim()) {
+        next.amount = String(price);
       }
       return { formValues: next };
     });
@@ -1758,6 +1781,54 @@ class Component extends DCLogic {
       this.setState({ categories: newCategories });
     }
     this.updateField(fieldKey, trimmed);
+  }
+
+  // ---------- income: per-client price list ----------
+  _saveIncomeCats(mutate) {
+    const cats = this.state.categories;
+    const inc = Object.assign({}, cats.income || {});
+    inc.channel = (inc.channel || []).slice();
+    inc.prices = Object.assign({}, inc.prices || {});
+    mutate(inc);
+    const next = Object.assign({}, cats, { income: inc });
+    try { localStorage.setItem(STORAGE_CATS_KEY, JSON.stringify(next)); } catch (e) {}
+    this.setState({ categories: next });
+    // categories travel with the data on every sync - push now so a refresh can't lose the change
+    this.syncToSheets(this.state.data);
+    try { localStorage.setItem(DIRTY_KEY, String(Date.now())); } catch (e) {}
+  }
+
+  _askPrice(name, current) {
+    const raw = window.prompt('כמה ' + name + ' משלם/ת לטיול (₪)?', current || '');
+    if (raw === null) return null;
+    const num = String(raw).replace(/[^\d.]/g, '');
+    return num;
+  }
+
+  addPriceClient() {
+    const name = (window.prompt('שם הלקוח (למשל סוכנות, מתכננת, שותף):') || '').trim();
+    if (!name) return;
+    const price = this._askPrice(name, '');
+    if (price === null) return;
+    this._saveIncomeCats(inc => {
+      if (inc.channel.indexOf(name) === -1) inc.channel.push(name);
+      inc.prices[name] = price;
+    });
+  }
+
+  editPrice(name) {
+    const cur = ((this.state.categories.income || {}).prices || {})[name] || '';
+    const price = this._askPrice(name, cur);
+    if (price === null) return;
+    this._saveIncomeCats(inc => { inc.prices[name] = price; });
+  }
+
+  removePriceClient(name) {
+    if (!window.confirm('להסיר את ' + name + ' מהמחירון? רשומות קיימות לא ישתנו.')) return;
+    this._saveIncomeCats(inc => {
+      delete inc.prices[name];
+      inc.channel = inc.channel.filter(c => c !== name);
+    });
   }
 
   triggerAttach() { if (this.attachInputRef.current) this.attachInputRef.current.click(); }
@@ -2194,7 +2265,17 @@ class Component extends DCLogic {
       }
 
       const filtered = q && built.length !== rawAll.length;
+      const incomePrices = (d.key === 'income') ? (((state.categories.income || {}).prices) || {}) : {};
       activeDomain = {
+        hasPriceList: d.key === 'income',
+        priceRows: Object.keys(incomePrices).map(name => ({
+          name: name,
+          priceLabel: incomePrices[name] ? ('₪' + incomePrices[name] + ' לטיול') : 'לא הוגדר מחיר',
+          onEdit: () => self.editPrice(name),
+          onRemove: () => self.removePriceClient(name),
+        })),
+        hasPriceRows: Object.keys(incomePrices).length > 0,
+        onAddPriceClient: () => self.addPriceClient(),
         key:d.key, label:d.label, kicker:d.kicker, color:d.color, colorBg:d.bg,
         countLabel: filtered ? (built.length + ' מתוך ' + rawAll.length + ' רשומות')
           : (built.length === 0 ? 'אין רשומות עדיין' : (built.length + (built.length === 1 ? ' רשומה' : ' רשומות'))),
