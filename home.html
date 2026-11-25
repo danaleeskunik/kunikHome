@@ -506,6 +506,25 @@
           </div>
         </sc-if>
 
+        <sc-if value="{{ activeDomain.hasBillCheck }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:20px;background:#FFFDF9;border:1px solid #E4DCCB;border-radius:16px;padding:16px 20px;">
+            <p style="margin:0;font-size:14px;font-weight:700;color:#22261F;">בקרת חשבונות מכרטיסי האשראי</p>
+            <p style="margin:2px 0 8px;font-size:12px;color:#8A8577;">מזוהה אוטומטית מהחיובים בכרטיסים. החיובים נוספים להיסטוריה של כל תשלום, ומתריעים כשתקופה לא חויבה.</p>
+            <sc-for list="{{ activeDomain.billRows }}" as="br" hint-placeholder-count="3">
+              <div style="padding:10px 0;border-top:1px solid #EFE9DC;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+                  <span style="font-size:13.5px;font-weight:600;color:#22261F;">{{ br.name }}</span>
+                  <span style="font-size:12.5px;font-weight:700;color:{{ br.statusColor }};">{{ br.statusText }}</span>
+                </div>
+                <p style="margin:3px 0 0;font-size:12px;color:#6E6A5E;">{{ br.lastText }} {{ br.nextText }}</p>
+                <sc-if value="{{ br.hasGaps }}" hint-placeholder-val="{{ false }}">
+                  <p style="margin:3px 0 0;font-size:11.5px;color:#8A8577;">היסטוריה: {{ br.gapsText }}. אולי שולם בדרך אחרת.</p>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
         <sc-for list="{{ activeDomain.groups }}" as="grp" hint-placeholder-count="1">
           <div style="margin-top:20px;background:#FFFDF9;border:1px solid #E4DCCB;border-radius:16px;overflow:hidden;">
             <sc-if value="{{ grp.hasHeader }}" hint-placeholder-val="{{ false }}">
@@ -753,6 +772,61 @@ const RECURRENCES = [
 ];
 const RECUR_MONTHS = { 'חד-פעמי': 0, 'חודשי': 1, 'דו-חודשי': 2, 'רבעוני': 3, 'חצי-שנתי': 6, 'שנתי': 12 };
 const WA_GROUP_LINK = 'https://chat.whatsapp.com/ER9EGi2GxgS6fv3xS7hsdM?s=cl&p=i&ilr=4';
+
+// ---------- bills detected from the credit-card data ----------
+// Recurring bills recognised by merchant name in EXPENSE_RECORDS. Each one feeds the
+// matching row of "תזכורות לתשלומים" (history + next expected date) and is watched for
+// a missing period. `names` = existing payment rows this rule may fill (matched by name).
+const BILL_RULES = [
+  { key:'arnona', name:'ארנונה', match:['עיריית רמת השרון'], exclude:['וטרינריה'], months:2, recurrence:'דו-חודשי', names:['ארנונה'] },
+  { key:'water', name:'מים (שרונים)', match:['שרונים','שרונית'], months:2, recurrence:'דו-חודשי', names:['מים','מים שרונים','שרונים'] },
+  { key:'power', name:'חשמל (פזגז)', match:['פזגז'], months:1, recurrence:'חודשי', names:['חשמל פזגז','חשמל','פזגז','גז'] },
+  { key:'yes', name:'YES', exact:['YES'], months:1, recurrence:'חודשי', names:['yes'] },
+];
+const BILL_GRACE_DAYS = 10;
+const BILL_SINCE = '2025-12-01';
+function isoAddMonths(iso, months) {
+  const p = String(iso).split('-');
+  const dt = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1 + months, 1);
+  const last = new Date(dt.getFullYear(), dt.getMonth() + 1, 0).getDate();
+  dt.setDate(Math.min(parseInt(p[2], 10), last));
+  return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+}
+function isoDiffDays(a, b) { return Math.round((new Date(a + 'T00:00:00') - new Date(b + 'T00:00:00')) / 86400000); }
+function billMatches(rule, merchant) {
+  const m = String(merchant || '').trim();
+  if (rule.exact) return rule.exact.some(x => m.toUpperCase() === x.toUpperCase());
+  if (rule.exclude && rule.exclude.some(x => m.indexOf(x) !== -1)) return false;
+  return rule.match.some(x => m.indexOf(x) !== -1);
+}
+// One entry per rule: its charges, last charge, next expected date, periods that should
+// already have been charged but weren't (only judged up to the date the card data covers,
+// so a charge that simply hasn't been imported yet is never reported as missed), and
+// historical gaps (informational - the bill may have been paid by another method).
+function analyzeBills(records, todayIso) {
+  let coverage = BILL_SINCE;
+  records.forEach(r => { if (r.d <= todayIso && r.d > coverage) coverage = r.d; });
+  return BILL_RULES.map(rule => {
+    const byKey = {};
+    records.forEach(r => {
+      if (r.d < BILL_SINCE || !(r.a > 0) || !billMatches(rule, r.m)) return;
+      const k = r.d + '|' + r.a;
+      if (!byKey[k]) byKey[k] = { d: r.d, a: r.a, card: r.card, m: r.m };
+    });
+    const charges = Object.keys(byKey).map(k => byKey[k]).sort((a, b) => a.d.localeCompare(b.d));
+    const out = { rule: rule, charges: charges, last: null, expected: null, missed: [], gaps: [], coverage: coverage };
+    if (!charges.length) return out;
+    out.last = charges[charges.length - 1];
+    out.expected = isoAddMonths(out.last.d, rule.months);
+    let e = out.expected;
+    while (isoAddMonths(e, 0) && isoDiffDays(coverage, e) >= BILL_GRACE_DAYS) { out.missed.push(e); e = isoAddMonths(e, rule.months); if (out.missed.length > 12) break; }
+    for (let i = 1; i < charges.length; i++) {
+      const gapMonths = isoDiffDays(charges[i].d, charges[i - 1].d) / 30.4;
+      if (gapMonths > rule.months * 1.6) out.gaps.push({ from: charges[i - 1].d, to: charges[i].d, months: Math.round(gapMonths * 10) / 10 });
+    }
+    return out;
+  });
+}
 
 const DOMAINS = [
   { key:'insurance', label:'ביטוחים', kicker:'פוליסות וחידושים', color:'#1B6FD1', bg:'#EAF2FD',
@@ -1516,6 +1590,10 @@ class Component extends DCLogic {
           try { localStorage.setItem(STORAGE_KEY, JSON.stringify(norm.data)); } catch (e) {}
           self.setState({ data: norm.data });
         }
+        try {
+          const withBills = self.syncBillsToPayments(norm.data);
+          if (withBills) self.persist(withBills);
+        } catch (e) {}
       })
       .catch(() => { clearTimeout(timer); self.setState({ syncStatus: 'error', checking: false }); });
   }
@@ -1783,6 +1861,52 @@ class Component extends DCLogic {
     this.updateField(fieldKey, trimmed);
   }
 
+  // ---------- bills from card data -> "תזכורות לתשלומים" ----------
+  // Fills the history (and, where empty, amount / frequency / next due date) of the matching
+  // payment row for every recurring bill found in the card data. Idempotent: history entries
+  // are keyed by date+amount, a row is only written when something actually changed.
+  syncBillsToPayments(data) {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const analysis = analyzeBills(EXPENSE_RECORDS, todayIso);
+    let list = (data.payments || []).slice();
+    let changed = false;
+    analysis.forEach(a => {
+      if (!a.charges.length) return;
+      const rule = a.rule;
+      const norm = x => String(x || '').trim().toLowerCase();
+      const cands = list.map((it, i) => ({ it: it, i: i })).filter(o => rule.names.some(n => norm(o.it.name) === norm(n)));
+      cands.sort((x, y) => String(y.it.dueDate || '').localeCompare(String(x.it.dueDate || '')));
+      let idx = cands.length ? cands[0].i : -1;
+      let item;
+      if (idx === -1) {
+        item = { id: 'bill-' + rule.key, name: rule.name, recurrence: rule.recurrence, amount: '', period: '', dueDate: '', paidDate: '', phone: '', notes: 'נוצר אוטומטית מחיובי כרטיס האשראי', history: [] };
+        list.push(item); idx = list.length - 1; changed = true;
+      } else { item = Object.assign({}, list[idx]); }
+      const hist = (item.history || []).slice();
+      const seen = {};
+      hist.forEach(h => { seen[h.date + '|' + Math.round(h.amount * 100)] = true; });
+      const latest = a.last;
+      let added = false;
+      a.charges.forEach(c => {
+        if (c.d === latest.d && c.a === latest.a) return;           // the latest charge is the row's current "paid" state
+        const k = c.d + '|' + Math.round(c.a * 100);
+        if (seen[k]) return;
+        hist.push({ date: c.d, amount: c.a, period: 'חיוב בכרטיס אשראי' }); seen[k] = true; added = true;
+      });
+      if (added) { hist.sort((x, y) => String(x.date).localeCompare(String(y.date))); item.history = hist; }
+      if (!String(item.amount || '').trim()) { item.amount = String(latest.a); added = true; }
+      if (!String(item.recurrence || '').trim()) { item.recurrence = rule.recurrence; added = true; }
+      // Rows whose due date was never set by hand (or was set by this sync) track the next
+      // expected charge; a hand-managed due date is left alone.
+      if (!String(item.dueDate || '').trim() || item.autoDue === 'true') {
+        const nextDue = isoAddMonths(latest.d, rule.months);
+        if (item.dueDate !== nextDue || item.paidDate !== latest.d || item.autoDue !== 'true') { item.dueDate = nextDue; item.paidDate = latest.d; item.autoDue = 'true'; added = true; }
+      }
+      if (added) { list[idx] = item; changed = true; }
+    });
+    return changed ? Object.assign({}, data, { payments: list }) : null;
+  }
+
   // ---------- income: per-client price list ----------
   _saveIncomeCats(mutate) {
     const cats = this.state.categories;
@@ -1999,6 +2123,7 @@ class Component extends DCLogic {
           const dateVal = item[df.key];
           if (!dateVal) return;
           if (d.paidKey && df.key === d.chargeKey && item[d.paidKey] && item[d.paidKey] <= dateVal) return;
+          if (item.autoDue === 'true') return;
           const days = self.daysUntil(dateVal);
           if (days === null || days > 31 || days < -90) return;
           const badge = self.badgeFor(days);
@@ -2012,6 +2137,35 @@ class Component extends DCLogic {
           });
         });
       });
+    });
+    // recurring bills read from the card data: warn when a period was not charged
+    // (judged only up to the date the card data covers) and remind before the next one.
+    const billAnalysis = analyzeBills(EXPENSE_RECORDS, new Date().toISOString().slice(0, 10));
+    billAnalysis.forEach(a => {
+      if (!a.last) return;
+      if (a.missed.length) {
+        attention.push({
+          key: 'bill-missed-' + a.rule.key, sortVal: a.missed[0],
+          name: 'לא זוהה חיוב ' + a.rule.name + (a.missed.length > 1 ? ' (' + a.missed.length + ' תקופות)' : ''),
+          subtitle: 'תזכורות לתשלומים · צפוי ב-' + self.formatDate(a.missed[0]) + ' · חיוב אחרון ' + self.formatDate(a.last.d),
+          badgeColor: '#A8492F', badgeText: 'ייתכן שפוספס',
+          hasWa: false, waLink: '',
+          onClick: () => self.setActiveSection('payments'),
+        });
+        return;
+      }
+      const days = self.daysUntil(a.expected);
+      if (days !== null && days >= 0 && days <= 7) {
+        const badge = self.badgeFor(days);
+        attention.push({
+          key: 'bill-next-' + a.rule.key, sortVal: a.expected,
+          name: a.rule.name + ' · חיוב צפוי',
+          subtitle: 'תזכורות לתשלומים · ' + self.formatDate(a.expected),
+          badgeColor: badge.color, badgeText: badge.text,
+          hasWa: false, waLink: '',
+          onClick: () => self.setActiveSection('payments'),
+        });
+      }
     });
     // custom, free-form reminder — available on every record in every domain,
     // separate from each domain's own built-in date fields above. Surfaces on
@@ -2266,7 +2420,21 @@ class Component extends DCLogic {
 
       const filtered = q && built.length !== rawAll.length;
       const incomePrices = (d.key === 'income') ? (((state.categories.income || {}).prices) || {}) : {};
+      const billRows = d.key === 'payments' ? analyzeBills(EXPENSE_RECORDS, new Date().toISOString().slice(0, 10)).map(a => {
+        const ok = !a.missed.length;
+        return {
+          name: a.rule.name,
+          lastText: a.last ? ('חיוב אחרון ' + self.formatDate(a.last.d) + ' · ' + self.money(a.last.a)) : 'לא נמצאו חיובים בכרטיסי האשראי',
+          nextText: a.last ? ('צפוי ' + self.formatDate(a.expected)) : '',
+          statusText: !a.last ? 'ללא נתונים' : (ok ? 'תקין' : ('לא זוהה חיוב מ-' + self.formatDate(a.missed[0]))),
+          statusColor: !a.last ? '#8A8577' : (ok ? '#2F5D45' : '#A8492F'),
+          hasGaps: a.gaps.length > 0,
+          gapsText: a.gaps.map(g => 'פער של ' + g.months + ' חודשים (' + self.formatDate(g.from) + ' עד ' + self.formatDate(g.to) + ')').join(' · '),
+        };
+      }) : [];
       activeDomain = {
+        hasBillCheck: d.key === 'payments',
+        billRows: billRows,
         hasPriceList: d.key === 'income',
         priceRows: Object.keys(incomePrices).map(name => ({
           name: name,
