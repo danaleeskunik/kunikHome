@@ -507,22 +507,38 @@
         </sc-if>
 
         <sc-if value="{{ activeDomain.hasBillCheck }}" hint-placeholder-val="{{ false }}">
-          <div style="margin-top:20px;background:#FFFDF9;border:1px solid #E4DCCB;border-radius:16px;padding:16px 20px;">
-            <p style="margin:0;font-size:14px;font-weight:700;color:#22261F;">בקרת חשבונות מכרטיסי האשראי</p>
-            <p style="margin:2px 0 8px;font-size:12px;color:#8A8577;">מזוהה אוטומטית מהחיובים בכרטיסים. החיובים נוספים להיסטוריה של כל תשלום, ומתריעים כשתקופה לא חויבה.</p>
-            <sc-for list="{{ activeDomain.billRows }}" as="br" hint-placeholder-count="3">
-              <div style="padding:10px 0;border-top:1px solid #EFE9DC;">
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-                  <span style="font-size:13.5px;font-weight:600;color:#22261F;">{{ br.name }}</span>
-                  <span style="font-size:12.5px;font-weight:700;color:{{ br.statusColor }};">{{ br.statusText }}</span>
+          <sc-for list="{{ activeDomain.billSections }}" as="bs" hint-placeholder-count="3">
+            <div style="margin-top:18px;background:#FFFDF9;border:1px solid #E4DCCB;border-radius:16px;overflow:hidden;">
+              <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;background:{{ activeDomain.colorBg }};">
+                <div style="flex:1;min-width:0;">
+                  <p style="margin:0;font-size:14.5px;font-weight:700;color:{{ activeDomain.color }};">{{ bs.name }}</p>
+                  <p style="margin:2px 0 0;font-size:12px;color:{{ bs.subColor }};">{{ bs.sub }}</p>
                 </div>
-                <p style="margin:3px 0 0;font-size:12px;color:#6E6A5E;">{{ br.lastText }} {{ br.nextText }}</p>
-                <sc-if value="{{ br.hasGaps }}" hint-placeholder-val="{{ false }}">
-                  <p style="margin:3px 0 0;font-size:11.5px;color:#8A8577;">היסטוריה: {{ br.gapsText }}. אולי שולם בדרך אחרת.</p>
+                <sc-if value="{{ bs.hasRecord }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ bs.onEdit }}" type="button" title="עריכה" style="border:1px solid #E4DCCB;background:#FFFDF9;border-radius:8px;width:30px;height:30px;cursor:pointer;color:#4E4A41;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4"></path></svg>
+                  </button>
+                  <button onClick="{{ bs.onDelete }}" type="button" title="מחיקה" style="border:1px solid #E4DCCB;background:#FFFDF9;border-radius:8px;width:30px;height:30px;cursor:pointer;color:#A8492F;font-size:15px;line-height:1;">×</button>
                 </sc-if>
               </div>
-            </sc-for>
-          </div>
+              <sc-for list="{{ bs.rows }}" as="row" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-top:1px solid #EFE9DC;background:{{ row.rowBg }};">
+                  <div style="flex:1;min-width:0;">
+                    <p style="margin:0;font-size:13.5px;font-weight:600;color:#22261F;">{{ row.period }}</p>
+                    <p style="margin:2px 0 0;font-size:11.5px;color:#8A8577;">{{ row.dateText }} {{ row.cardText }}</p>
+                  </div>
+                  <span style="font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums;color:#22261F;">{{ row.amountText }}</span>
+                  <span style="min-width:88px;text-align:left;font-size:12px;font-weight:700;color:{{ row.statusColor }};">{{ row.statusText }}</span>
+                  <sc-if value="{{ row.canMarkOther }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ row.onAction }}" type="button" style="border:1px solid #E4DCCB;background:#FFFDF9;border-radius:100px;padding:5px 10px;font-size:11.5px;font-weight:600;cursor:pointer;color:#4E4A41;white-space:nowrap;">{{ row.actionText }}</button>
+                  </sc-if>
+                  <sc-if value="{{ row.canUnmark }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ row.onAction }}" type="button" style="border:none;background:transparent;font-size:11.5px;cursor:pointer;color:#8A8577;text-decoration:underline;">{{ row.actionText }}</button>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
         </sc-if>
 
         <sc-for list="{{ activeDomain.groups }}" as="grp" hint-placeholder-count="1">
@@ -774,17 +790,31 @@ const RECUR_MONTHS = { 'חד-פעמי': 0, 'חודשי': 1, 'דו-חודשי': 2
 const WA_GROUP_LINK = 'https://chat.whatsapp.com/ER9EGi2GxgS6fv3xS7hsdM?s=cl&p=i&ilr=4';
 
 // ---------- bills detected from the credit-card data ----------
-// Recurring bills recognised by merchant name in EXPENSE_RECORDS. Each one feeds the
-// matching row of "תזכורות לתשלומים" (history + next expected date) and is watched for
-// a missing period. `names` = existing payment rows this rule may fill (matched by name).
+// Recurring bills / standing orders recognised by merchant name in EXPENSE_RECORDS. Each one
+// is a topic table in "תזכורות לתשלומים" (one row per period) and is watched for a missing
+// period. `names` = existing payment rows this rule may fill (matched by name).
 const BILL_RULES = [
   { key:'arnona', name:'ארנונה', match:['עיריית רמת השרון'], exclude:['וטרינריה'], months:2, recurrence:'דו-חודשי', names:['ארנונה'] },
   { key:'water', name:'מים (שרונים)', match:['שרונים','שרונית'], months:2, recurrence:'דו-חודשי', names:['מים','מים שרונים','שרונים'] },
   { key:'power', name:'חשמל (פזגז)', match:['פזגז'], months:1, recurrence:'חודשי', names:['חשמל פזגז','חשמל','פזגז','גז'] },
   { key:'yes', name:'YES', exact:['YES'], months:1, recurrence:'חודשי', names:['yes'] },
+  { key:'harelLife', name:'הראל חיים', exact:['הראל חיים'], months:1, recurrence:'חודשי', names:['הראל חיים'] },
+  { key:'harelHealth', name:'הראל בריאות', exact:['הראל בריאות'], months:1, recurrence:'חודשי', names:['הראל בריאות'] },
+  { key:'harelHealth2', name:'הראל ביטוח בריאות', match:['הראל-ביטוח בריאות'], months:1, recurrence:'חודשי', names:['הראל ביטוח בריאות'] },
+  { key:'harelHome', name:'הראל ביטוח דירה', match:['הראל ביטוח דירה'], months:1, recurrence:'חודשי', names:['הראל ביטוח דירה'] },
+  { key:'phoenix', name:'הפניקס חיים ובריאות', match:['הפניקס חיים ובריאות'], months:1, recurrence:'חודשי', names:['הפניקס חיים ובריאות','הפניקס'] },
+  { key:'directLife', name:'ביטוח ישיר חיים', match:['ביטוח ישיר חיים'], months:1, recurrence:'חודשי', names:['ביטוח ישיר חיים','ביטוח ישיר'] },
+  { key:'ayalon', name:'איילון משכנתא-מבנה', match:['איילון משכנתא'], months:1, recurrence:'חודשי', names:['איילון משכנתא-מבנה','איילון'] },
+  { key:'maccabi', name:'קרן מכבי', match:['קרן מכבי'], months:1, recurrence:'חודשי', names:['קרן מכבי','מכבי'] },
+  { key:'marpet', name:'מרפאט', match:['מרפאט'], months:1, recurrence:'חודשי', names:['מרפאט'] },
+  { key:'ituran', name:'איתוראן', match:['איתוראן'], months:1, recurrence:'חודשי', names:['איתוראן'] },
+  { key:'spotify', name:'ספוטיפיי', match:['SPOTIFY'], months:1, recurrence:'חודשי', names:['ספוטיפיי','spotify'] },
+  { key:'claude', name:'Claude (Anthropic)', match:['ANTHROPIC'], months:1, recurrence:'חודשי', names:['claude','anthropic'] },
+  { key:'cloudflare', name:'Cloudflare', match:['CLOUDFLARE'], months:1, recurrence:'חודשי', names:['cloudflare'] },
 ];
 const BILL_GRACE_DAYS = 10;
 const BILL_SINCE = '2025-12-01';
+const BILL_ALERT_DAYS = 120;
 function isoAddMonths(iso, months) {
   const p = String(iso).split('-');
   const dt = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1 + months, 1);
@@ -793,17 +823,29 @@ function isoAddMonths(iso, months) {
   return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
 }
 function isoDiffDays(a, b) { return Math.round((new Date(a + 'T00:00:00') - new Date(b + 'T00:00:00')) / 86400000); }
+// Merchant names differ in hyphens / quotes / spacing between cards ("הראל-ביטוח" vs "הראל ביטוח").
+function billNorm(t) { return String(t || '').toUpperCase().replace(/[-\u2010-\u2015"'׳״.]/g, ' ').replace(/\s+/g, ' ').trim(); }
 function billMatches(rule, merchant) {
-  const m = String(merchant || '').trim();
-  if (rule.exact) return rule.exact.some(x => m.toUpperCase() === x.toUpperCase());
-  if (rule.exclude && rule.exclude.some(x => m.indexOf(x) !== -1)) return false;
-  return rule.match.some(x => m.indexOf(x) !== -1);
+  const m = billNorm(merchant);
+  if (rule.exact) return rule.exact.some(x => m === billNorm(x));
+  if (rule.exclude && rule.exclude.some(x => m.indexOf(billNorm(x)) !== -1)) return false;
+  return rule.match.some(x => m.indexOf(billNorm(x)) !== -1);
 }
-// One entry per rule: its charges, last charge, next expected date, periods that should
-// already have been charged but weren't (only judged up to the date the card data covers,
-// so a charge that simply hasn't been imported yet is never reported as missed), and
-// historical gaps (informational - the bill may have been paid by another method).
-function analyzeBills(records, todayIso) {
+const BILL_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+// A bi-monthly bill charged in month X covers X and X+1 (the same convention as the manual rows).
+function billPeriodLabel(rule, iso) {
+  const p = String(iso).split('-'); const y = parseInt(p[0], 10), m = parseInt(p[1], 10) - 1;
+  if (rule.months < 2) return BILL_MONTHS[m] + ' ' + y;
+  const m2 = (m + 1) % 12, y2 = m === 11 ? y + 1 : y;
+  return y2 === y ? (BILL_MONTHS[m] + '–' + BILL_MONTHS[m2] + ' ' + y) : (BILL_MONTHS[m] + ' ' + y + '–' + BILL_MONTHS[m2] + ' ' + y2);
+}
+// One entry per rule: ledger `rows` (paid / missed / other = paid some other way / unknown),
+// `last` charge, next `expected` date and `missed` = uncovered periods in the last 120 days.
+// A period is only judged "missed" up to the date the card data covers, so a charge that simply
+// has not been imported yet is never reported. A charge about k x the usual amount after a gap
+// covers k periods (e.g. two months billed together). `covers` = {ruleKey: [ISO dates]} marks
+// periods the user said were paid some other way.
+function analyzeBills(records, todayIso, covers) {
   let coverage = BILL_SINCE;
   records.forEach(r => { if (r.d <= todayIso && r.d > coverage) coverage = r.d; });
   return BILL_RULES.map(rule => {
@@ -814,16 +856,40 @@ function analyzeBills(records, todayIso) {
       if (!byKey[k]) byKey[k] = { d: r.d, a: r.a, card: r.card, m: r.m };
     });
     const charges = Object.keys(byKey).map(k => byKey[k]).sort((a, b) => a.d.localeCompare(b.d));
-    const out = { rule: rule, charges: charges, last: null, expected: null, missed: [], gaps: [], coverage: coverage };
+    const out = { rule: rule, charges: charges, rows: [], last: null, expected: null, missed: [], coverage: coverage };
     if (!charges.length) return out;
+    const sorted = charges.map(c => c.a).sort((a, b) => a - b);
+    const med = sorted[Math.floor(sorted.length / 2)] || 1;
+    const cov = (covers && covers[rule.key]) || [];
+    const isCovered = e => cov.some(c => Math.abs(isoDiffDays(c, e)) <= 20);
+    const rows = [];
+    charges.forEach((c, i) => {
+      const k = Math.max(1, Math.round(c.a / med));
+      if (i > 0) {
+        const prev = charges[i - 1];
+        let n = Math.round(isoDiffDays(c.d, prev.d) / (rule.months * 30.4)) - 1;
+        n = Math.max(0, n - (k - 1));
+        for (let j = 1; j <= n; j++) { const e = isoAddMonths(prev.d, rule.months * j); rows.push({ kind: isCovered(e) ? 'other' : 'missed', d: e }); }
+      }
+      rows.push({ kind: 'paid', d: c.d, a: c.a, card: c.card });
+    });
     out.last = charges[charges.length - 1];
     out.expected = isoAddMonths(out.last.d, rule.months);
-    let e = out.expected;
-    while (isoAddMonths(e, 0) && isoDiffDays(coverage, e) >= BILL_GRACE_DAYS) { out.missed.push(e); e = isoAddMonths(e, rule.months); if (out.missed.length > 12) break; }
-    for (let i = 1; i < charges.length; i++) {
-      const gapMonths = isoDiffDays(charges[i].d, charges[i - 1].d) / 30.4;
-      if (gapMonths > rule.months * 1.6) out.gaps.push({ from: charges[i - 1].d, to: charges[i].d, months: Math.round(gapMonths * 10) / 10 });
-    }
+    let e = out.expected, guard = 0;
+    while (isoDiffDays(coverage, e) >= BILL_GRACE_DAYS && guard++ < 12) { rows.push({ kind: isCovered(e) ? 'other' : 'missed', d: e }); e = isoAddMonths(e, rule.months); }
+    rows.sort((a, b) => a.d.localeCompare(b.d));
+    if (rule.months < 2) {
+      const merged = [];
+      rows.forEach(r => {
+        const prev = merged[merged.length - 1];
+        if (r.kind === 'paid' && prev && prev.kind === 'paid' && prev.d.slice(0, 7) === r.d.slice(0, 7)) {
+          prev.a = Math.round((prev.a + r.a) * 100) / 100; prev.d = r.d; prev.n = (prev.n || 1) + 1;
+          if (prev.card.indexOf(r.card) === -1) prev.card += ' · ' + r.card;
+        } else merged.push(Object.assign({}, r));
+      });
+      out.rows = merged;
+    } else out.rows = rows;
+    out.missed = rows.filter(r => r.kind === 'missed' && isoDiffDays(todayIso, r.d) <= BILL_ALERT_DAYS).map(r => r.d);
     return out;
   });
 }
@@ -1874,7 +1940,7 @@ class Component extends DCLogic {
       if (!a.charges.length) return;
       const rule = a.rule;
       const norm = x => String(x || '').trim().toLowerCase();
-      const cands = list.map((it, i) => ({ it: it, i: i })).filter(o => rule.names.some(n => norm(o.it.name) === norm(n)));
+      const cands = list.map((it, i) => ({ it: it, i: i })).filter(o => o.it.id === 'bill-' + rule.key || norm(o.it.name) === norm(rule.name) || rule.names.some(n => norm(o.it.name) === norm(n)));
       cands.sort((x, y) => String(y.it.dueDate || '').localeCompare(String(x.it.dueDate || '')));
       let idx = cands.length ? cands[0].i : -1;
       let item;
@@ -1891,7 +1957,7 @@ class Component extends DCLogic {
         if (c.d === latest.d && c.a === latest.a) return;           // the latest charge is the row's current "paid" state
         const k = c.d + '|' + Math.round(c.a * 100);
         if (seen[k]) return;
-        hist.push({ date: c.d, amount: c.a, period: 'חיוב בכרטיס אשראי' }); seen[k] = true; added = true;
+        hist.push({ date: c.d, amount: c.a, period: billPeriodLabel(rule, c.d) }); seen[k] = true; added = true;
       });
       if (added) { hist.sort((x, y) => String(x.date).localeCompare(String(y.date))); item.history = hist; }
       if (!String(item.amount || '').trim()) { item.amount = String(latest.a); added = true; }
@@ -1905,6 +1971,31 @@ class Component extends DCLogic {
       if (added) { list[idx] = item; changed = true; }
     });
     return changed ? Object.assign({}, data, { payments: list }) : null;
+  }
+
+  _billTarget(data, rule) {
+    const norm = x => String(x || '').trim().toLowerCase();
+    const list = (data.payments || []).slice();
+    const cands = list.map((it, i) => ({ it: it, i: i })).filter(o => o.it.id === 'bill-' + rule.key || norm(o.it.name) === norm(rule.name) || rule.names.some(n => norm(o.it.name) === norm(n)));
+    cands.sort((x, y) => String(y.it.dueDate || '').localeCompare(String(x.it.dueDate || '')));
+    return { list: list, idx: cands.length ? cands[0].i : -1 };
+  }
+
+  setBillOtherPaid(ruleKey, expectedIso, on) {
+    const rule = BILL_RULES.find(r => r.key === ruleKey);
+    if (!rule) return;
+    const t = this._billTarget(this.state.data, rule);
+    let list = t.list, idx = t.idx;
+    if (idx === -1) {
+      list.push({ id: 'bill-' + rule.key, name: rule.name, recurrence: rule.recurrence, amount: '', period: '', dueDate: '', paidDate: '', phone: '', notes: 'נוצר אוטומטית מחיובי כרטיס האשראי', history: [] });
+      idx = list.length - 1;
+    }
+    const item = Object.assign({}, list[idx]);
+    const dates = String(item.otherPaid || '').split(',').filter(Boolean).filter(d => Math.abs(isoDiffDays(d, expectedIso)) > 20);
+    if (on) dates.push(expectedIso);
+    item.otherPaid = dates.join(',');
+    list[idx] = item;
+    this.persist(Object.assign({}, this.state.data, { payments: list }));
   }
 
   // ---------- income: per-client price list ----------
@@ -1983,6 +2074,11 @@ class Component extends DCLogic {
     const existing = (this.state.data[domain.key] || []).find(it => it.id === id);
     let history = (existing && existing.history) || [];
     const extra = { id: id, history: history };
+    if (existing) {
+      if (existing.otherPaid) extra.otherPaid = existing.otherPaid;
+      // a hand-edited due date means the user now manages it; otherwise keep auto-tracking
+      if (existing.autoDue === 'true' && values.dueDate === existing.dueDate) extra.autoDue = 'true';
+    }
     if (domain.payable && existing) {
       const oldCharge = existing[domain.chargeKey];
       const newCharge = values[domain.chargeKey];
@@ -2420,21 +2516,63 @@ class Component extends DCLogic {
 
       const filtered = q && built.length !== rawAll.length;
       const incomePrices = (d.key === 'income') ? (((state.categories.income || {}).prices) || {}) : {};
-      const billRows = d.key === 'payments' ? analyzeBills(EXPENSE_RECORDS, new Date().toISOString().slice(0, 10)).map(a => {
-        const ok = !a.missed.length;
-        return {
-          name: a.rule.name,
-          lastText: a.last ? ('חיוב אחרון ' + self.formatDate(a.last.d) + ' · ' + self.money(a.last.a)) : 'לא נמצאו חיובים בכרטיסי האשראי',
-          nextText: a.last ? ('צפוי ' + self.formatDate(a.expected)) : '',
-          statusText: !a.last ? 'ללא נתונים' : (ok ? 'תקין' : ('לא זוהה חיוב מ-' + self.formatDate(a.missed[0]))),
-          statusColor: !a.last ? '#8A8577' : (ok ? '#2F5D45' : '#A8492F'),
-          hasGaps: a.gaps.length > 0,
-          gapsText: a.gaps.map(g => 'פער של ' + g.months + ' חודשים (' + self.formatDate(g.from) + ' עד ' + self.formatDate(g.to) + ')').join(' · '),
-        };
-      }) : [];
+      const billSections = [];
+      if (d.key === 'payments') {
+        const todayIso = new Date().toISOString().slice(0, 10);
+        const payRows = state.data.payments || [];
+        const normName = x => String(x || '').trim().toLowerCase();
+        const covers = {};
+        BILL_RULES.forEach(rule => {
+          const t = self._billTarget(state.data, rule);
+          if (t.idx !== -1 && t.list[t.idx].otherPaid) covers[rule.key] = String(t.list[t.idx].otherPaid).split(',').filter(Boolean);
+        });
+        const usedIds = {};
+        analyzeBills(EXPENSE_RECORDS, todayIso, covers).forEach(a => {
+          const t = self._billTarget(state.data, a.rule);
+          const rec = t.idx === -1 ? null : t.list[t.idx];
+          if (rec) usedIds[rec.id] = true;
+          // other rows whose name matches this rule (e.g. the old duplicate) are shown under it too
+          payRows.forEach(pr => { if (pr.id === 'bill-' + a.rule.key || normName(pr.name) === normName(a.rule.name) || a.rule.names.some(n => normName(n) === normName(pr.name))) usedIds[pr.id] = true; });
+          if (!a.charges.length && !rec) return;
+          const rows = a.rows.slice().reverse().map(r => ({
+            period: billPeriodLabel(a.rule, r.d),
+            dateText: self.formatDate(r.d),
+            amountText: r.kind === 'paid' ? self.money(r.a) : '',
+            cardText: r.kind === 'paid' ? (r.card + (r.n > 1 ? ' · ' + r.n + ' חיובים' : '')) : '',
+            statusText: r.kind === 'paid' ? 'שולם' : (r.kind === 'other' ? 'שולם בדרך אחרת' : 'לא זוהה חיוב'),
+            statusColor: r.kind === 'paid' ? '#2F5D45' : (r.kind === 'other' ? '#6E6A5E' : '#A8492F'),
+            rowBg: r.kind === 'missed' ? '#FBEFEA' : 'transparent',
+            canMarkOther: r.kind === 'missed', canUnmark: r.kind === 'other',
+            actionText: r.kind === 'missed' ? 'שולם בדרך אחרת' : 'ביטול',
+            onAction: () => self.setBillOtherPaid(a.rule.key, r.d, r.kind === 'missed'),
+          }));
+          if (a.last) rows.unshift({
+            period: billPeriodLabel(a.rule, a.expected), dateText: self.formatDate(a.expected), amountText: '', cardText: '',
+            statusText: a.missed.length || a.rows.some(x => x.kind === 'missed' && x.d === a.expected) ? '' : 'צפוי', statusColor: '#8A8577', rowBg: 'transparent',
+            canMarkOther: false, canUnmark: false, actionText: '', onAction: null,
+          });
+          const total = a.charges.reduce((sum, c) => sum + c.a, 0);
+          const missedCount = a.rows.filter(x => x.kind === 'missed').length;
+          billSections.push({
+            key: a.rule.key, name: rec && rec.name ? rec.name : a.rule.name,
+            sub: a.rule.recurrence + ' · ' + a.charges.length + ' חיובים · סה"כ ' + self.money(total) + (missedCount ? ' · ' + missedCount + ' ללא חיוב' : ''),
+            subColor: missedCount ? '#A8492F' : '#6E6A5E',
+            hasRecord: !!rec, rows: rows.filter(x => x.statusText !== '' || x.amountText),
+            onEdit: rec ? (() => self.openEditForm('payments', rec)) : null,
+            onDelete: rec ? (() => self.deleteItem('payments', rec.id)) : null,
+          });
+        });
+        // payment rows that belong to no bill rule: still shown, as their own topic
+        payRows.filter(pr => !usedIds[pr.id]).forEach(pr => {
+          const hist = (pr.history || []).slice().sort((x, y) => String(y.date).localeCompare(String(x.date)));
+          const rows = hist.map(h => ({ period: h.period || self.monthLabel(h.date), dateText: self.formatDate(h.date), amountText: self.money(self.parseAmount(h.amount)), cardText: '', statusText: 'שולם', statusColor: '#2F5D45', rowBg: 'transparent', canMarkOther: false, canUnmark: false, actionText: '', onAction: null }));
+          if (pr.dueDate) rows.unshift({ period: pr.period || self.monthLabel(pr.dueDate), dateText: self.formatDate(pr.dueDate), amountText: self.money(self.parseAmount(pr.amount)), cardText: '', statusText: (pr.paidDate && pr.paidDate <= pr.dueDate) ? 'שולם' : 'ממתין', statusColor: (pr.paidDate && pr.paidDate <= pr.dueDate) ? '#2F5D45' : '#9A6B2A', rowBg: 'transparent', canMarkOther: false, canUnmark: false, actionText: '', onAction: null });
+          billSections.push({ key: pr.id, name: pr.name || 'ללא שם', sub: (pr.recurrence || '') + (pr.amount ? ' · ' + self.money(self.parseAmount(pr.amount)) : ''), subColor: '#6E6A5E', hasRecord: true, rows: rows, onEdit: () => self.openEditForm('payments', pr), onDelete: () => self.deleteItem('payments', pr.id) });
+        });
+      }
       activeDomain = {
         hasBillCheck: d.key === 'payments',
-        billRows: billRows,
+        billSections: billSections,
         hasPriceList: d.key === 'income',
         priceRows: Object.keys(incomePrices).map(name => ({
           name: name,
@@ -2454,8 +2592,8 @@ class Component extends DCLogic {
         hasComputedColumn: !!(d.computedMonthlyKeys || d.computedMonthlyFromRecurrence),
         computedColumnLabel: (d.computedMonthlyLabel || '') + sortArrow('__computed__'),
         onComputedSortClick: (e) => self.setSort(d.key, '__computed__', e),
-        groups: groups,
-        isEmpty: built.length === 0,
+        groups: d.key === 'payments' ? [] : groups,
+        isEmpty: built.length === 0 && !billSections.length,
         showEmptyCta: rawAll.length === 0,
         emptyMessage: rawAll.length === 0 ? 'אין עדיין רשומות בתחום הזה.' : 'לא נמצאו תוצאות התואמות לסינון.',
         hasMonthlyTotal: monthlyTotal !== null && built.length > 0,
